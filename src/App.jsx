@@ -4,7 +4,7 @@ import {
   ChevronRight, ChevronLeft, Bell, Search, Shield, History, 
   Settings, User, Map, Battery, AlertTriangle, CheckCircle2, 
   Download, ChevronDown, Star, Filter, ArrowRight, X, Wrench as WrenchIcon, Plus, LogOut, FileText, ShoppingBag, Gift, Info,
-  Disc, Cpu, Wind, Package, Paperclip, Mic, Check, Mail, Globe, Smartphone, Lock, Edit2, BookOpen, PlayCircle
+  Disc, Cpu, Wind, Package, Paperclip, Mic, Check, Mail, Globe, Smartphone, Lock, Edit2, BookOpen, PlayCircle, Activity, Database, Hash, Clock
 } from 'lucide-react';
 
 // --- ASSETS OFFICIELS BYD (Remplacés par des versions PNG Transparentes) ---
@@ -190,7 +190,6 @@ const ToggleRow = ({ icon: Icon, title, desc, active, onToggle }) => (
         <div className="text-[12px] font-medium text-[var(--text-muted)] mt-0.5 max-w-[200px] leading-tight">{desc}</div>
       </div>
     </div>
-    {/* Animated Toggle Switch */}
     <div className={`w-12 h-7 rounded-full flex items-center p-1 transition-colors duration-300 ${active ? 'bg-[var(--success)]' : 'bg-gray-200'}`}>
       <div className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-300 ${active ? 'translate-x-5' : 'translate-x-0'}`}></div>
     </div>
@@ -204,8 +203,8 @@ export default function App() {
   const [activeOverlay, setActiveOverlay] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [currentRepairStep, setCurrentRepairStep] = useState(5); // Étape devis par défaut
 
-  // --- NOUVEAU : État global des véhicules ---
   const [vehicles, setVehicles] = useState([
     { id: 1, name: "BYD HAN", vin: "LC99999999999", km: 15200, img: ASSETS.han },
     { id: 2, name: "BYD ATTO 3", vin: "LC00000000000", km: 42050, img: ASSETS.atto3 }
@@ -215,7 +214,7 @@ export default function App() {
 
   const handleAddVehicle = (newVehicle) => {
     setVehicles([...vehicles, newVehicle]);
-    setActiveVehicleId(newVehicle.id); // Le nouveau véhicule devient actif automatiquement
+    setActiveVehicleId(newVehicle.id);
   };
 
   useEffect(() => {
@@ -242,16 +241,17 @@ export default function App() {
         {currentView === 'login' && <LoginScreen onNavigate={navigateTo} />}
         {currentView === 'signup' && <SignupScreen onNavigate={navigateTo} />}
         {currentView === 'otp' && <OTPScreen onNavigate={navigateTo} />}
-        {currentView === 'add-vehicle' && <AddVehicleScreen onNavigate={navigateTo} />}
+        {currentView === 'vehicle-recognition' && <VehicleRecognitionScreen onNavigate={navigateTo} />}
+        {currentView === 'add-vehicle' && <AddVehicleScreen onNavigate={navigateTo} onAdd={handleAddVehicle} />}
         
         {/* Main App Interface */}
         {currentView === 'main' && (
           <PremiumScreen>
             {/* Main Tabs Container */}
             <div className="flex-1 overflow-y-auto hide-scrollbar pb-32 relative z-10">
-              {activeTab === 'accueil' && <HomeTab onOpen={openOverlay} onNotifications={() => setNotificationsOpen(true)} activeVehicle={activeVehicle} />}
+              {activeTab === 'accueil' && <HomeTab onOpen={openOverlay} onNotifications={() => setNotificationsOpen(true)} activeVehicle={activeVehicle} onNavigateTab={setActiveTab} />}
               {activeTab === 'services' && <ServicesTab onOpen={openOverlay} />}
-              {activeTab === 'suivi' && <HistoryTab onOpenReport={(report) => { setSelectedReport(report); openOverlay('report-preview'); }} />}
+              {activeTab === 'suivi' && <HistoryTab onOpenReport={(report) => { setSelectedReport(report); openOverlay('report-preview'); }} currentRepairStep={currentRepairStep} onOpenQuote={() => openOverlay('repair-quote')} />}
               {activeTab === 'explorer' && <ExploreTab onOpen={openOverlay} />}
               {activeTab === 'profil' && <ProfileTab onNavigate={navigateTo} onOpen={openOverlay} vehicles={vehicles} setVehicles={setVehicles} activeVehicleId={activeVehicleId} setActiveVehicleId={setActiveVehicleId} />}
             </div>
@@ -260,7 +260,7 @@ export default function App() {
             <div className="absolute bottom-6 left-6 right-6 glass-panel rounded-[32px] px-2 py-2 flex justify-between items-center z-40 shadow-[0_24px_48px_-12px_rgba(0,40,94,0.2)]">
               <NavItem icon={Car} label="Accueil" active={activeTab === 'accueil'} onClick={() => setActiveTab('accueil')} />
               <NavItem icon={WrenchIcon} label="Services" active={activeTab === 'services'} onClick={() => setActiveTab('services')} />
-              <NavItem icon={History} label="Suivi" active={activeTab === 'suivi'} onClick={() => setActiveTab('suivi')} />
+              <NavItem icon={Activity} label="Suivi SAV" active={activeTab === 'suivi'} onClick={() => setActiveTab('suivi')} />
               <NavItem icon={Map} label="Explorer" active={activeTab === 'explorer'} onClick={() => setActiveTab('explorer')} />
               <NavItem icon={User} label="Profil" active={activeTab === 'profil'} onClick={() => setActiveTab('profil')} />
             </div>
@@ -273,18 +273,18 @@ export default function App() {
                 {activeOverlay === 'emergency' && <EmergencyScreen onClose={closeOverlay} />}
                 {activeOverlay === 'chatbot' && <ChatbotScreen onClose={closeOverlay} />}
                 {activeOverlay === 'map' && <InteractiveMapScreen onClose={closeOverlay} />}
-                {activeOverlay === 'charging' && <ChargingScreen onClose={closeOverlay} onOpen={openOverlay} />}
-                {activeOverlay === 'charging-reservation' && <ChargingReservationScreen onClose={closeOverlay} />}
                 {activeOverlay === 'faq' && <FAQScreen onClose={closeOverlay} />}
                 {activeOverlay === 'maintenance-info' && <MaintenanceInfoScreen onClose={closeOverlay} />}
                 {activeOverlay === 'offers' && <OffersScreen onClose={closeOverlay} onBook={() => openOverlay('booking')} />}
                 {activeOverlay === 'accessories' && <AccessoriesScreen onClose={closeOverlay} />}
                 {activeOverlay === 'loyalty' && <LoyaltyScreen onClose={closeOverlay} />}
                 {activeOverlay === 'contact' && <ContactScreen onClose={closeOverlay} onOpen={openOverlay} />}
+                {activeOverlay === 'repair-quote' && <RepairQuoteModal onClose={closeOverlay} onAccept={() => { setCurrentRepairStep(6); }} />}
                 {activeOverlay === 'report-preview' && <ReportPreviewModal report={selectedReport} onClose={closeOverlay} />}
                 
                 {/* Profile specific Overlays */}
                 {activeOverlay === 'personal-info' && <PersonalInfoScreen onClose={closeOverlay} />}
+                {activeOverlay === 'autoline-sync' && <AutolineSyncScreen onClose={closeOverlay} />}
                 {activeOverlay === 'profile-notifications' && <ProfileNotificationsScreen onClose={closeOverlay} />}
                 {activeOverlay === 'app-settings' && <AppSettingsScreen onClose={closeOverlay} />}
                 {activeOverlay === 'privacy' && <PrivacyScreen onClose={closeOverlay} />}
@@ -296,7 +296,7 @@ export default function App() {
 
             {/* Notifications Overlay */}
             {notificationsOpen && (
-              <NotificationsOverlay onClose={() => setNotificationsOpen(false)} onOpen={openOverlay} />
+              <NotificationsOverlay onClose={() => setNotificationsOpen(false)} onOpen={openOverlay} onNavigateTab={setActiveTab} />
             )}
 
             {/* Global Floating Chatbot Button */}
@@ -444,7 +444,7 @@ const OTPScreen = ({ onNavigate }) => (
         ))}
       </div>
       
-      <Button onClick={() => onNavigate('add-vehicle')} fullWidth>Vérifier le code</Button>
+      <Button onClick={() => onNavigate('vehicle-recognition')} fullWidth>Vérifier le code</Button>
       
       <div className="mt-8 text-center">
         <button className="text-[14px] text-[var(--text-muted)] font-bold hover:text-[var(--accent)]">Renvoyer le code (00:45)</button>
@@ -453,40 +453,264 @@ const OTPScreen = ({ onNavigate }) => (
   </PremiumScreen>
 );
 
-const AddVehicleScreen = ({ onNavigate }) => (
-  <PremiumScreen>
-    <Header transparent />
-    <div className="px-8 py-4 flex-1 overflow-y-auto hide-scrollbar flex flex-col animate-slide-in-right pb-10">
-      <h2 className="text-[32px] font-black text-[var(--text)] mb-2 tracking-tight">Votre Véhicule</h2>
-      <p className="text-[var(--text-muted)] text-[15px] font-medium mb-8">Ajoutez votre BYD pour personnaliser votre expérience SAV.</p>
+const VehicleRecognitionScreen = ({ onNavigate }) => {
+  const [step, setStep] = useState(0);
+  const [isVehicleFound, setIsVehicleFound] = useState(false); 
+
+  useEffect(() => {
+    // Séquence d'animation simulée pour la connexion Autoline/BDD
+    const t1 = setTimeout(() => setStep(1), 1500);
+    const t2 = setTimeout(() => setStep(2), 3000);
+    const t3 = setTimeout(() => setStep(3), 4500);
+    const t4 = setTimeout(() => setStep(4), 5500); // Résultat final
+    
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
+  }, []);
+
+  const steps = [
+    { icon: User, text: "Recherche du profil client" },
+    { icon: Shield, text: "Connexion sécurisée Autoline" },
+    { icon: Database, text: "Recherche des véhicules associés" }
+  ];
+
+  return (
+    <PremiumScreen className="relative flex flex-col justify-center px-8">
+      {/* Bouton de démo corrigé (discret et premium) */}
+      <button onClick={() => setIsVehicleFound(!isVehicleFound)} className="absolute top-12 right-6 bg-white/80 backdrop-blur-md px-4 py-2 rounded-full text-[var(--text-muted)] text-[10px] font-bold uppercase tracking-widest z-50 border border-[var(--ice)] shadow-sm hover:shadow-md hover:text-[var(--primary)] transition-all">
+        {isVehicleFound ? 'Mode présentation : Véhicule trouvé' : 'Mode présentation : Aucun véhicule'}
+      </button>
       
-      <div className="flex flex-col gap-2 mb-5">
-        <label className="text-[13px] font-black text-[var(--text)] uppercase tracking-wider ml-2 opacity-80">Modèle BYD</label>
-        <div className="relative">
-          <select className="w-full bg-white border border-[var(--ice)] shadow-sm rounded-[20px] px-5 py-4 text-[15px] font-bold text-[var(--primary)] focus:outline-none appearance-none">
-            <option>BYD ATTO 3</option>
-            <option>BYD SEAL</option>
-            <option>BYD HAN</option>
-          </select>
-          <ChevronDown size={20} className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
+      {/* Background Radar Animation (Light Theme) */}
+      <div className="absolute top-[30%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 border border-[var(--primary)]/10 rounded-full animate-[ping_3s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
+      <div className="absolute top-[30%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 border border-[var(--primary)]/20 rounded-full animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite] delay-300"></div>
+
+      <div className="relative z-10 flex flex-col items-center mb-12 mt-10">
+        <div className="w-24 h-24 bg-white border border-[var(--ice)] rounded-full flex items-center justify-center mb-8 shadow-md relative">
+          {step < 4 ? (
+             <Search size={40} className="text-[var(--primary)] animate-pulse" strokeWidth={2.5} />
+          ) : isVehicleFound ? (
+             <>
+               <div className="absolute inset-0 bg-[var(--success)] rounded-full animate-ping opacity-20"></div>
+               <CheckCircle2 size={48} className="text-[var(--success)] drop-shadow-sm bg-white rounded-full" strokeWidth={2.5} />
+             </>
+          ) : (
+             <>
+               <div className="absolute inset-0 bg-[var(--warning)] rounded-full animate-ping opacity-20"></div>
+               <AlertTriangle size={40} className="text-[var(--warning)] drop-shadow-sm" strokeWidth={2.5} />
+             </>
+          )}
+        </div>
+        
+        <h2 className="text-[28px] font-black text-[var(--text)] tracking-tight mb-3 text-center leading-tight">
+          {step < 4 ? "Synchronisation" : isVehicleFound ? "Véhicule trouvé !" : "Aucun véhicule"}
+        </h2>
+        <p className="text-[14px] text-[var(--text-muted)] font-medium text-center max-w-[90%] leading-relaxed">
+          {step < 4 
+            ? "Veuillez patienter pendant la recherche de votre dossier dans notre base." 
+            : isVehicleFound
+            ? "Nous avons identifié un véhicule correspondant à votre profil."
+            : "Aucun véhicule n'a été trouvé automatiquement. Vous pouvez l'ajouter manuellement."}
+        </p>
+      </div>
+
+      {/* Loading Steps */}
+      {step < 4 && (
+        <div className="bg-white rounded-[32px] p-6 w-full flex flex-col gap-6 animate-slide-up relative z-10 border border-[var(--ice)] shadow-sm">
+          {steps.map((s, i) => (
+            <div key={i} className="flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-[18px] flex items-center justify-center border-2 shrink-0 transition-all duration-500 shadow-sm ${
+                step > i ? 'bg-[var(--success)] border-[var(--success)] text-white shadow-sm' :
+                step === i ? 'bg-[var(--ice)] border-blue-200 text-[var(--primary)] animate-pulse' :
+                'bg-gray-50 border-gray-200 text-gray-400'
+              }`}>
+                {step > i ? <Check size={20} strokeWidth={3} /> : <s.icon size={20} strokeWidth={2.5} />}
+              </div>
+              <span className={`text-[15px] font-bold transition-all duration-500 ${step >= i ? 'text-[var(--text)]' : 'text-gray-400'}`}>
+                {s.text}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Result Card (Found) */}
+      {step === 4 && isVehicleFound && (
+        <div className="w-full flex flex-col gap-4 animate-slide-up relative z-10">
+           <PremiumCard className="!p-5 shadow-md">
+             {/* Header */}
+             <div className="flex justify-between items-center mb-5">
+               <span className="text-[10px] font-black uppercase tracking-widest bg-[#F0FDF4] text-[var(--success)] px-3 py-1.5 rounded-lg border border-[#bbf7d0]">Correspondance exacte</span>
+             </div>
+
+             {/* Vehicle Hero */}
+             <div className="flex items-center gap-4 mb-6">
+               <div className="w-28 h-20 relative flex items-center justify-center bg-[var(--bg-color)] rounded-[16px] border border-[var(--ice)] shadow-inner shrink-0">
+                 <img src={ASSETS.atto3} className="w-[140%] max-w-none object-contain drop-shadow-md translate-x-2" alt="ATTO 3" />
+               </div>
+               <div>
+                 <div className="text-[var(--text)] font-black text-[22px] tracking-tight mb-1.5">BYD ATTO 3</div>
+                 <div className="flex flex-col gap-1.5">
+                   <div className="text-[var(--text-muted)] font-bold text-[12px] tracking-widest uppercase flex items-center gap-2"><span className="text-[var(--primary)] border border-blue-200 px-1.5 py-0.5 rounded text-[9px] w-8 text-center bg-[var(--ice)]">IMM</span> 12*** | A | *</div>
+                   <div className="text-[var(--text-muted)] font-bold text-[12px] tracking-widest uppercase flex items-center gap-2"><span className="text-[var(--primary)] border border-blue-200 px-1.5 py-0.5 rounded text-[9px] w-8 text-center bg-[var(--ice)]">VIN</span> LC000000***</div>
+                 </div>
+               </div>
+             </div>
+
+             {/* Details Grid */}
+             <div className="grid grid-cols-2 gap-3 mb-2">
+               <div className="bg-[var(--bg-color)] rounded-[16px] p-3.5 border border-[var(--ice)]">
+                 <div className="text-[10px] text-[var(--text-muted)] font-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><History size={12}/> Dernier SAV</div>
+                 <div className="text-[13px] font-bold text-[var(--text)]">12 Janv 2024</div>
+               </div>
+               <div className="bg-[var(--bg-color)] rounded-[16px] p-3.5 border border-[var(--ice)]">
+                 <div className="text-[10px] text-[var(--text-muted)] font-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><MapPin size={12}/> Kilométrage</div>
+                 <div className="text-[13px] font-bold text-[var(--text)]">42 050 km</div>
+               </div>
+               <div className="bg-[var(--bg-color)] rounded-[16px] p-3.5 border border-[var(--ice)] col-span-2 flex items-center justify-between">
+                 <div className="flex items-center gap-2">
+                   <WrenchIcon size={14} className="text-[var(--primary)]" strokeWidth={2.5}/>
+                   <span className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest">Centre habituel</span>
+                 </div>
+                 <div className="text-[13px] font-black text-[var(--primary)]">Casa - Ain Sebaâ</div>
+               </div>
+             </div>
+           </PremiumCard>
+
+           <Button variant="primary" fullWidth className="mt-4 !py-4.5 !text-[16px]" onClick={() => onNavigate('main')}>
+             Sélectionner ce véhicule
+           </Button>
+           
+           <button onClick={() => onNavigate('add-vehicle')} className="text-[var(--text-muted)] text-[14px] font-bold mt-2 hover:text-[var(--primary)] transition-colors underline-offset-4 hover:underline py-2">
+             Ce n'est pas mon véhicule
+           </button>
+        </div>
+      )}
+
+      {/* Result Card (Not Found) */}
+      {step === 4 && !isVehicleFound && (
+        <div className="w-full flex flex-col gap-4 animate-slide-up relative z-10 mt-6">
+           <Button variant="primary" fullWidth className="!py-4.5 !text-[16px]" onClick={() => onNavigate('add-vehicle')}>
+             Ajouter un véhicule manuellement
+           </Button>
+           
+           <button onClick={() => onNavigate('main')} className="text-[var(--text-muted)] text-[14px] font-bold mt-2 hover:text-[var(--primary)] transition-colors underline-offset-4 hover:underline py-2">
+             Passer cette étape
+           </button>
+        </div>
+      )}
+    </PremiumScreen>
+  );
+};
+
+const AddVehicleScreen = ({ onNavigate, onAdd }) => {
+  const [step, setStep] = useState('form');
+  const [model, setModel] = useState('ATTO 3');
+  const [vin, setVin] = useState('');
+  const [km, setKm] = useState('');
+  const [immat, setImmat] = useState('');
+  const [city, setCity] = useState('Casablanca');
+  const [center, setCenter] = useState('BYD Casa - Ain Sebaâ');
+
+  const handleSave = () => {
+    onAdd({
+      id: Date.now(),
+      name: `BYD ${model}`,
+      vin: vin || "LC00000000000",
+      km: parseInt(km) || 0,
+      img: model === 'ATTO 3' ? ASSETS.atto3 : model === 'HAN' ? ASSETS.han : ASSETS.seal
+    });
+    setStep('success');
+  };
+
+  if (step === 'success') {
+    return (
+      <PremiumScreen className="items-center justify-center px-8 !bg-none">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,var(--ice)_0%,transparent_70%)] opacity-50"></div>
+        <div className="z-10 flex flex-col items-center text-center animate-slide-up">
+          <div className="relative mb-8">
+            <div className="absolute inset-0 bg-[var(--success)] rounded-full blur-[30px] opacity-20 animate-pulse"></div>
+            <div className="w-24 h-24 bg-white rounded-[32px] flex items-center justify-center shadow-[0_20px_40px_-10px_rgba(22,163,74,0.3)] relative z-10 border border-green-100">
+              <CheckCircle2 size={48} className="text-[var(--success)]" strokeWidth={2.5} />
+            </div>
+          </div>
+          <h2 className="text-[32px] font-black text-[var(--text)] mb-4 tracking-tight leading-none">Véhicule ajouté !</h2>
+          <p className="text-[15px] font-medium text-[var(--text-muted)] mb-10 leading-relaxed max-w-[90%]">
+            Votre véhicule a été ajouté à votre garage. Certaines informations pourront être vérifiées avec notre base SAV pour plus de précision.
+          </p>
+          <Button onClick={() => onNavigate('main')} fullWidth className="!py-4.5 !text-[16px]">
+            Accéder à mon espace
+          </Button>
+        </div>
+      </PremiumScreen>
+    );
+  }
+
+  return (
+    <PremiumScreen>
+      <Header transparent onBack={() => onNavigate('vehicle-recognition')} />
+      <div className="px-8 py-4 flex-1 overflow-y-auto hide-scrollbar flex flex-col animate-slide-in-right pb-10">
+        <h2 className="text-[32px] font-black text-[var(--text)] mb-2 tracking-tight">Votre Véhicule</h2>
+        <p className="text-[var(--text-muted)] text-[15px] font-medium mb-8">Ajoutez votre BYD pour personnaliser votre expérience SAV.</p>
+        
+        {/* Modèle */}
+        <div className="flex flex-col gap-2 mb-5">
+          <label className="text-[13px] font-black text-[var(--text)] uppercase tracking-wider ml-2 opacity-80">Modèle BYD</label>
+          <div className="relative">
+            <select value={model} onChange={(e) => setModel(e.target.value)} className="w-full bg-white border border-[var(--ice)] shadow-sm rounded-[20px] px-5 py-4 text-[15px] font-bold text-[var(--primary)] focus:outline-none appearance-none">
+              <option value="ATTO 3">BYD ATTO 3</option>
+              <option value="SEAL">BYD SEAL</option>
+              <option value="HAN">BYD HAN</option>
+            </select>
+            <ChevronDown size={20} className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
+          </div>
+        </div>
+        
+        <Input label="Immatriculation" placeholder="12345 | A | 1" value={immat} onChange={(e) => setImmat(e.target.value)} />
+        <Input label="Numéro de châssis (VIN)" placeholder="LC00000000000000" value={vin} onChange={(e) => setVin(e.target.value)} />
+        <Input label="Kilométrage actuel" type="number" placeholder="ex: 15000" value={km} onChange={(e) => setKm(e.target.value)} />
+        
+        {/* Ville */}
+        <div className="flex flex-col gap-2 mb-5">
+          <label className="text-[13px] font-black text-[var(--text)] uppercase tracking-wider ml-2 opacity-80">Ville de résidence</label>
+          <div className="relative">
+            <select value={city} onChange={(e) => setCity(e.target.value)} className="w-full bg-white border border-[var(--ice)] shadow-[0_2px_10px_rgba(0,40,94,0.02)] rounded-[20px] px-5 py-4 text-[15px] font-bold text-[var(--text)] focus:outline-none appearance-none">
+              <option>Casablanca</option>
+              <option>Rabat</option>
+              <option>Marrakech</option>
+              <option>Tanger</option>
+              <option>Agadir</option>
+              <option>Fès</option>
+            </select>
+            <ChevronDown size={20} className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
+          </div>
+        </div>
+
+        {/* Centre SAV */}
+        <div className="flex flex-col gap-2 mb-8">
+          <label className="text-[13px] font-black text-[var(--text)] uppercase tracking-wider ml-2 opacity-80">Centre SAV Préféré</label>
+          <div className="relative">
+            <select value={center} onChange={(e) => setCenter(e.target.value)} className="w-full bg-white border border-[var(--ice)] shadow-[0_2px_10px_rgba(0,40,94,0.02)] rounded-[20px] px-5 py-4 text-[15px] font-bold text-[var(--primary)] focus:outline-none appearance-none">
+              <option>BYD Casa - Ain Sebaâ</option>
+              <option>BYD Casa - Anfa</option>
+              <option>BYD Rabat - Agdal</option>
+              <option>BYD Marrakech - Guéliz</option>
+              <option>BYD Tanger - Free Zone</option>
+            </select>
+            <ChevronDown size={20} className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
+          </div>
+        </div>
+        
+        <div className="mt-auto pt-4 pb-8 flex flex-col gap-4">
+           <Button onClick={handleSave} fullWidth>Enregistrer mon véhicule</Button>
+           <button onClick={() => onNavigate('main')} className="w-full py-2 text-[14px] text-[var(--text-muted)] font-bold hover:text-[var(--text)]">Passer cette étape</button>
         </div>
       </div>
-      
-      <Input label="Immatriculation" placeholder="12345 | A | 1" />
-      <Input label="Numéro de châssis (VIN)" placeholder="LC00000000000000" />
-      <Input label="Kilométrage actuel" type="number" placeholder="ex: 15000" />
-      
-      <div className="mt-auto pt-10 pb-8 flex flex-col gap-4">
-         <Button onClick={() => onNavigate('main')} fullWidth>Enregistrer mon véhicule</Button>
-         <button onClick={() => onNavigate('main')} className="w-full py-2 text-[14px] text-[var(--text-muted)] font-bold hover:text-[var(--text)]">Passer cette étape</button>
-      </div>
-    </div>
-  </PremiumScreen>
-);
+    </PremiumScreen>
+  );
+};
 
 // --- MAIN TABS ---
-
-const HomeTab = ({ onOpen, onNotifications, activeVehicle }) => (
+const HomeTab = ({ onOpen, onNotifications, activeVehicle, onNavigateTab }) => (
   <div className="flex flex-col animate-fade-in">
     {/* Global Header */}
     <div className="px-6 pt-16 pb-6 flex justify-between items-center z-20 gap-4 relative">
@@ -544,7 +768,6 @@ const HomeTab = ({ onOpen, onNotifications, activeVehicle }) => (
 
         {/* Transparent Vehicle Visual integration perfectly styled */}
         <div className="relative h-44 flex items-center justify-center mt-2 mb-8 z-20 w-full pointer-events-none">
-           {/* Custom Shadow mapped to the transparent car */}
            <div className="absolute bottom-2 w-4/5 h-6 bg-[var(--cyan)] rounded-full blur-[40px] opacity-20"></div>
            <div className="absolute bottom-1 w-3/4 h-3 bg-black/60 rounded-[100%] blur-lg"></div>
            <img src={activeVehicle.img} alt={activeVehicle.name} className="w-[125%] max-w-none object-contain drop-shadow-[0_20px_30px_rgba(0,10,30,0.9)] scale-110 translate-x-2" />
@@ -579,7 +802,7 @@ const HomeTab = ({ onOpen, onNotifications, activeVehicle }) => (
       <div className="grid grid-cols-4 gap-3">
         <QuickAction icon={Calendar} label="Rendez-vous" onClick={() => onOpen('booking')} />
         <QuickAction icon={WrenchIcon} label="Simulateur" onClick={() => onOpen('simulator')} />
-        <QuickAction icon={Zap} label="Recharge" onClick={() => onOpen('charging')} />
+        <QuickAction icon={Activity} label="Suivi réparation" onClick={() => onNavigateTab('suivi')} />
         <QuickAction icon={AlertTriangle} label="Dépannage" onClick={() => onOpen('emergency')} variant="danger" />
       </div>
     </div>
@@ -642,13 +865,17 @@ const ServicesTab = ({ onOpen }) => (
       <p className="text-[15px] font-medium text-[var(--text-muted)] mt-2">Tout ce dont vous avez besoin, au même endroit.</p>
     </div>
     
+    {/* Featured Large Module */}
     <PremiumCard className="mb-4 relative overflow-hidden !p-0 shadow-lg group" onClick={() => onOpen('booking')}>
       <div className="absolute right-0 bottom-0 w-48 h-48 bg-[var(--ice)] rounded-tl-full -z-0 opacity-50 group-active:scale-110 transition-transform"></div>
       <div className="p-8 relative z-10 flex flex-col h-full">
         <span className="text-[10px] font-black bg-[var(--primary)] text-white px-2.5 py-1 rounded mb-4 w-fit uppercase tracking-widest">Service prioritaire</span>
         <IconBubble icon={Calendar} variant="gradient" size="lg" className="w-fit mb-5" />
         <h3 className="text-[22px] font-black text-[var(--text)] mb-2 tracking-tight">Prendre rendez-vous</h3>
-        <p className="text-[14px] font-medium text-[var(--text-muted)] mb-8 max-w-[80%] leading-relaxed">Réservez, simulez ou planifiez votre entretien officiel BYD.</p>
+        <p className="text-[14px] font-medium text-[var(--text-muted)] mb-8 max-w-[80%] leading-relaxed">Réservez, simulez ou planifiez votre entretien officiel BYD en quelques secondes.</p>
+        <div className="mt-auto flex items-center gap-2 text-[13px] font-black text-[var(--accent)] uppercase tracking-wider bg-[var(--ice)] px-4 py-2.5 rounded-full w-fit">
+          Planifier <ArrowRight size={16} strokeWidth={2.5} />
+        </div>
       </div>
     </PremiumCard>
 
@@ -659,7 +886,7 @@ const ServicesTab = ({ onOpen }) => (
 
     <div className="flex flex-col gap-4">
       <ServiceHorizontal icon={AlertTriangle} title="Service dépannage" desc="Assistance 24/7 en cas d'urgence." onClick={() => onOpen('emergency')} danger />
-      <ServiceHorizontal icon={Map} title="Carte & Réseau BYD" desc="Centres SAV, points de vente et bornes de recharge au même endroit." onClick={() => onOpen('map')} />
+      <ServiceHorizontal icon={Map} title="Carte & Réseau BYD" desc="Localisez les centres SAV, showrooms et points de service BYD au Maroc." onClick={() => onOpen('map')} />
       <ServiceHorizontal icon={FileText} title="Manuels & Guides" desc="Téléchargez la documentation de votre véhicule." onClick={() => onOpen('manuals')} />
     </div>
   </div>
@@ -685,8 +912,9 @@ const ServiceHorizontal = ({ icon: Icon, title, desc, onClick, danger }) => (
   </div>
 );
 
-const HistoryTab = ({ onOpenReport }) => {
+const HistoryTab = ({ onOpenReport, currentRepairStep, onOpenQuote }) => {
   const [activeFilter, setActiveFilter] = useState('Tout');
+  const [isServiceActive, setIsServiceActive] = useState(true);
 
   const interventionsData = [
     { id: 1, date: "24 MAI 2024", km: "30 000 km", category: "Entretien", title: "Entretien périodique", price: "2 150 DH", details: ["Filtre à air", "Filtre d'habitacle", "Diagnostic complet"], isRecent: true, techNote: "L'état général du véhicule est excellent. La batterie Blade affiche un SOH de 99%." },
@@ -700,9 +928,152 @@ const HistoryTab = ({ onOpenReport }) => {
   return (
     <div className="flex flex-col animate-fade-in px-6 pt-16">
       <div className="mb-6">
-        <h1 className="text-[32px] font-black text-[var(--text)] tracking-tight leading-none mb-1">Historique</h1>
-        <p className="text-[14px] font-medium text-[var(--text-muted)]">Suivi et interventions SAV</p>
+        <h1 className="text-[32px] font-black text-[var(--text)] tracking-tight leading-none mb-1">Suivi SAV</h1>
+        <p className="text-[14px] font-medium text-[var(--text-muted)]">État de votre véhicule en temps réel et historique</p>
       </div>
+
+      {/* NOUVEAU: Sélecteur de présentation */}
+      <div className="mb-8">
+         <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2 px-1 flex items-center gap-1.5">
+           <Activity size={12} strokeWidth={3}/> Scénario de présentation
+         </div>
+         <div className="flex p-1 bg-[var(--bg-color)] rounded-[16px] shadow-inner border border-[var(--ice)]">
+            <button 
+              onClick={() => setIsServiceActive(true)} 
+              className={`flex-1 py-2.5 text-[13px] font-bold rounded-[12px] transition-all duration-300 ${isServiceActive ? 'bg-white text-[var(--primary)] shadow-sm border border-[var(--ice)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}
+            >
+              Service en cours
+            </button>
+            <button 
+              onClick={() => setIsServiceActive(false)} 
+              className={`flex-1 py-2.5 text-[13px] font-bold rounded-[12px] transition-all duration-300 ${!isServiceActive ? 'bg-white text-[var(--primary)] shadow-sm border border-[var(--ice)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}
+            >
+              Aucun service en cours
+            </button>
+         </div>
+      </div>
+
+      <h3 className="text-[18px] font-black text-[var(--text)] mb-4 tracking-tight px-1">Intervention en cours</h3>
+      
+      {isServiceActive ? (
+        <PremiumCard className="mb-10 !p-0 overflow-hidden shadow-md border-2 border-[var(--primary)]">
+           {/* Header de la carte */}
+           <div className="bg-[var(--ice)] p-5 border-b border-blue-100 flex flex-col gap-4">
+              <div className="flex justify-between items-start">
+                 <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full gradient-blue flex items-center justify-center text-white shadow-sm border border-white">
+                      <WrenchIcon size={18} strokeWidth={2.5}/>
+                    </div>
+                    <div>
+                      <div className="text-[15px] font-black text-[var(--text)] tracking-tight">BYD ATTO 3</div>
+                      <div className="text-[12px] font-medium text-[var(--text-muted)]">Casa - Ain Sebaâ</div>
+                    </div>
+                 </div>
+                 <div className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest animate-pulse shadow-inner border border-white ${currentRepairStep === 5 ? 'bg-yellow-100 text-[var(--warning)]' : 'bg-blue-100 text-[var(--primary)]'}`}>
+                   {currentRepairStep === 5 ? 'Devis en attente' : currentRepairStep === 6 ? 'Devis validé' : 'En atelier'}
+                 </div>
+              </div>
+              {/* Nouvelles informations métier */}
+              <div className="flex items-center justify-between mt-2 pt-4 border-t border-blue-200/50">
+                 <div className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--primary)] bg-white/50 px-2 py-1 rounded-md">
+                   <Hash size={14} /> OR-2026-00482
+                 </div>
+                 <div className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--text-muted)]">
+                   <Clock size={14} /> MAJ : Aujourd'hui à 11h35
+                 </div>
+              </div>
+           </div>
+           
+           {/* Barre de progression des étapes verticale */}
+           <div className="p-6">
+              <div className="relative ml-2 mb-8 flex flex-col gap-6">
+                {/* Ligne grise de fond */}
+                <div className="absolute left-[14px] top-4 bottom-4 w-1 bg-gray-100 rounded-full z-0"></div>
+                {/* Ligne verte de progression */}
+                <div className="absolute left-[14px] top-4 w-1 bg-[var(--success)] rounded-full z-0 shadow-[0_0_8px_rgba(22,163,74,0.6)] transition-all duration-1000" style={{ height: `${((currentRepairStep - 1) / 11) * 100}%` }}></div>
+                
+                {[
+                  { id: 1, title: "Rendez-vous confirmé", desc: "Votre créneau est réservé en centre." },
+                  { id: 2, title: "Véhicule réceptionné", desc: "Prise en charge par notre conseiller." },
+                  { id: 3, title: "Diagnostic en cours", desc: "Analyse approfondie par nos experts." },
+                  { id: 4, title: "Diagnostic terminé", desc: "Bilan complet de votre véhicule." },
+                  { id: 5, title: "Devis complémentaire en attente", desc: "Une action est requise de votre part." },
+                  { id: 6, title: "Devis validé", desc: "Les réparations peuvent reprendre." },
+                  { id: 7, title: "Réparation en cours", desc: "Le technicien intervient sur votre véhicule." },
+                  { id: 8, title: "Pièce en attente", desc: "Approvisionnement en cours depuis notre magasin." },
+                  { id: 9, title: "Contrôle qualité", desc: "Vérification selon les standards BYD." },
+                  { id: 10, title: "Véhicule prêt", desc: "En attente de votre récupération." },
+                  { id: 11, title: "Véhicule livré", desc: "Restitution effectuée avec succès." },
+                  { id: 12, title: "Intervention clôturée", desc: "Dossier SAV archivé." }
+                ].map((step) => {
+                  const status = step.id < currentRepairStep ? 'completed' : step.id === currentRepairStep ? 'current' : 'upcoming';
+                  const isQuoteStep = step.id === 5;
+                  
+                  return (
+                    <div key={step.id} 
+                         className={`relative flex items-center gap-4 ${isQuoteStep && status === 'current' ? 'cursor-pointer group' : ''}`}
+                         onClick={() => { if (isQuoteStep && status === 'current') onOpenQuote(); }}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ring-4 ring-white transition-all duration-500 ${
+                        status === 'completed' ? 'bg-[var(--success)] text-white shadow-sm z-10' : 
+                        status === 'current' ? 'bg-white border-4 border-[var(--primary)] text-[var(--primary)] scale-125 shadow-[0_0_15px_rgba(0,40,94,0.2)] relative z-20' : 
+                        'bg-gray-50 border-2 border-gray-200 text-gray-300 z-10'
+                      }`}>
+                        {status === 'completed' && <Check size={14} strokeWidth={3}/>}
+                        {status === 'current' && <WrenchIcon size={14} strokeWidth={2.5} className="animate-pulse"/>}
+                        {status === 'upcoming' && <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>}
+                      </div>
+                      <div className={`flex flex-col justify-center ${status === 'current' ? 'pl-1' : ''}`}>
+                         <div className={`transition-all duration-300 ${
+                           status === 'completed' ? 'text-[14px] font-bold text-[var(--text)]' : 
+                           status === 'current' ? 'text-[16px] font-black text-[var(--primary)] tracking-tight mb-0.5' : 
+                           'text-[14px] font-bold text-gray-400'
+                         }`}>
+                           {step.title}
+                         </div>
+                         
+                         {status === 'current' && (
+                           <div className="text-[13px] font-medium text-[var(--text-muted)] leading-snug animate-fade-in">
+                             {step.desc}
+                           </div>
+                         )}
+
+                         {isQuoteStep && status === 'current' && (
+                            <div className="mt-2 flex items-center gap-1.5 bg-[var(--warning)] text-white px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest w-fit shadow-sm group-hover:scale-105 transition-transform">
+                               <FileText size={12} strokeWidth={3}/> Voir le devis
+                            </div>
+                         )}
+                         {isQuoteStep && status === 'completed' && (
+                            <div className="mt-1.5 flex items-center gap-1.5 bg-[#F0FDF4] text-[var(--success)] px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest w-fit shadow-sm border border-green-100">
+                               <Check size={12} strokeWidth={3}/> Devis accepté
+                            </div>
+                         )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-between items-center bg-[var(--bg-color)] p-4 rounded-[20px] border border-[var(--ice)] shadow-inner">
+                <div className="flex items-center gap-3 text-[13px] font-bold text-[var(--text-muted)]">
+                   <div className="w-8 h-8 rounded-[12px] bg-white flex items-center justify-center shadow-sm text-[var(--primary)] border border-[var(--ice)]"><Calendar size={16} strokeWidth={2.5}/></div>
+                   Restitution estimée
+                </div>
+                <div className="text-[15px] font-black text-[var(--text)]">Aujourd'hui, 16:30</div>
+              </div>
+           </div>
+        </PremiumCard>
+      ) : (
+        <PremiumCard className="mb-10 !p-8 text-center flex flex-col items-center justify-center border border-[var(--ice)] border-dashed bg-white/50">
+           <div className="w-16 h-16 bg-[#F0FDF4] rounded-full flex items-center justify-center text-[var(--success)] mb-4 border border-[#bbf7d0] shadow-sm">
+             <CheckCircle2 size={32} strokeWidth={2.5}/>
+           </div>
+           <h4 className="text-[18px] font-black text-[var(--text)] tracking-tight mb-2">Aucune intervention</h4>
+           <p className="text-[13px] font-medium text-[var(--text-muted)] leading-relaxed">Votre véhicule n'est actuellement pas en atelier. Tout est en ordre !</p>
+        </PremiumCard>
+      )}
+
+      <h3 className="text-[18px] font-black text-[var(--text)] mb-4 tracking-tight px-1">Historique des interventions</h3>
 
       {/* Premium Filter Chips */}
       <div className="flex gap-2.5 overflow-x-auto hide-scrollbar mb-8 pb-2 -mx-6 px-6">
@@ -811,57 +1182,6 @@ const TimelineItem = ({ date, km, type, price, details, isRecent, onClick }) => 
   </div>
 );
 
-const ReportPreviewModal = ({ report, onClose }) => {
-  if (!report) return null;
-  return (
-    <PremiumScreen className="h-full z-[100] fixed inset-0 bg-transparent">
-      <div className="absolute inset-0 bg-[var(--primary-deep)]/70 backdrop-blur-md transition-opacity" onClick={onClose}></div>
-      <div className="absolute bottom-0 left-0 right-0 bg-[var(--bg-color)] rounded-t-[48px] p-8 shadow-[0_-20px_40px_rgba(0,0,0,0.3)] border-t border-white/50 animate-slide-up flex flex-col max-h-[85vh]">
-        <div className="w-16 h-1.5 bg-gray-300 rounded-full mx-auto mb-8 shrink-0"></div>
-        
-        <div className="overflow-y-auto hide-scrollbar pb-8 flex flex-col">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h3 className="text-[24px] font-black text-[var(--text)] tracking-tight leading-tight mb-2">{report.title}</h3>
-                <p className="text-[13px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{report.date}</p>
-              </div>
-              <div className="bg-[var(--ice)] px-4 py-2 rounded-[16px] shadow-inner border border-white">
-                <span className="text-[16px] font-black text-[var(--primary)]">{report.price}</span>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mb-8">
-              <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-[14px] shadow-sm border border-[var(--ice)] text-[13px] font-bold text-[var(--text-muted)]">
-                <MapPin size={16} className="text-[var(--primary)]" /> {report.km}
-              </div>
-              <div className="flex items-center gap-2 bg-[#F0FDF4] px-4 py-2.5 rounded-[14px] shadow-sm border border-[#bbf7d0] text-[13px] font-bold text-[var(--success)]">
-                <CheckCircle2 size={16} /> Terminé
-              </div>
-            </div>
-
-            <h4 className="text-[15px] font-black text-[var(--text)] tracking-tight mb-4 px-1">Détails des opérations</h4>
-            <div className="bg-white rounded-[28px] p-6 shadow-sm border border-[var(--ice)] mb-8 flex flex-col gap-4">
-              {report.details.map((d, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full bg-[var(--ice)] flex items-center justify-center text-[var(--primary)] shrink-0 border border-white shadow-inner"><Check size={14} strokeWidth={3}/></div>
-                  <span className="text-[15px] font-bold text-[var(--text)]">{d}</span>
-                </div>
-              ))}
-            </div>
-
-            <h4 className="text-[15px] font-black text-[var(--text)] tracking-tight mb-4 px-1">Note de l'expert BYD</h4>
-            <div className="bg-white rounded-[28px] p-6 shadow-sm border border-[var(--ice)] mb-8 flex items-start gap-4">
-              <div className="w-12 h-12 rounded-[20px] bg-[var(--bg-color)] flex items-center justify-center text-[var(--primary)] shrink-0 border border-[var(--ice)]"><User size={20} strokeWidth={2.5} /></div>
-              <p className="text-[14px] font-medium text-[var(--text-muted)] leading-relaxed italic pt-1">"{report.techNote}"</p>
-            </div>
-            
-            <Button variant="primary" fullWidth icon={Download} className="!py-4.5 !text-[16px] shrink-0" onClick={onClose}>Télécharger le rapport PDF</Button>
-        </div>
-      </div>
-    </PremiumScreen>
-  );
-};
-
 const ExploreTab = ({ onOpen }) => (
   <div className="flex flex-col animate-fade-in px-6 pt-16">
     <h1 className="text-[32px] font-black text-[var(--text)] tracking-tight mb-8">Explorer</h1>
@@ -911,8 +1231,8 @@ const ExploreTab = ({ onOpen }) => (
 
     <h3 className="text-[18px] font-black text-[var(--text)] mb-4 tracking-tight px-1">Boutique & Extras</h3>
     <div className="flex flex-col gap-4">
-      <ExploreHorizontalCard title="Accessoires BYD" desc="Intérieur, recharge, protection..." icon={ShoppingBag} onClick={() => onOpen('accessories')} />
-      <ExploreHorizontalCard title="Carte & Réseau BYD" desc="Centres SAV, points de vente et bornes de recharge au même endroit." icon={Map} onClick={() => onOpen('map')} />
+      <ExploreHorizontalCard title="Accessoires BYD" desc="Intérieur, extérieur, style..." icon={ShoppingBag} onClick={() => onOpen('accessories')} />
+      <ExploreHorizontalCard title="Carte & Réseau BYD" desc="Localisez les centres SAV, showrooms et points de service BYD au Maroc." icon={Map} onClick={() => onOpen('map')} />
       <ExploreHorizontalCard title="Contact" desc="Joindre notre équipe dédiée." icon={Phone} onClick={() => onOpen('contact')} />
     </div>
   </div>
@@ -1063,6 +1383,7 @@ const ProfileTab = ({ onNavigate, onOpen, vehicles, setVehicles, activeVehicleId
       <h3 className="text-[18px] font-black text-[var(--text)] mb-4 tracking-tight px-1">Préférences</h3>
       <div className="bg-white rounded-[32px] border border-[var(--ice)] overflow-hidden mb-8 shadow-sm">
         <ProfileRow icon={User} label="Informations personnelles" onClick={() => onOpen('personal-info')} />
+        <ProfileRow icon={Database} label="Synchronisation SAV" onClick={() => onOpen('autoline-sync')} />
         <ProfileRow icon={Bell} label="Notifications" onClick={() => onOpen('profile-notifications')} />
         <ProfileRow icon={Settings} label="Préférences de l'application" onClick={() => onOpen('app-settings')} />
         <ProfileRow icon={Shield} label="Confidentialité" onClick={() => onOpen('privacy')} />
@@ -1089,7 +1410,6 @@ const ProfileRow = ({ icon: Icon, label, onClick }) => {
 };
 
 // --- PROFILE OVERLAYS ---
-
 const PersonalInfoScreen = ({ onClose }) => (
   <PremiumScreen className="h-full z-[80] fixed inset-0 flex flex-col">
     <Header title="Informations" onBack={onClose} />
@@ -1119,6 +1439,72 @@ const PersonalInfoScreen = ({ onClose }) => (
     </div>
   </PremiumScreen>
 );
+
+const AutolineSyncScreen = ({ onClose }) => {
+  const SyncRow = ({ icon: Icon, title, status, isLast }) => (
+    <div className={`flex items-center justify-between p-5 ${!isLast ? 'border-b border-[var(--ice)]' : ''} bg-white transition-colors hover:bg-gray-50`}>
+      <div className="flex items-center gap-4">
+         <div className="w-12 h-12 rounded-[18px] bg-[var(--bg-color)] flex items-center justify-center text-[var(--primary)] border border-[var(--ice)] shadow-inner">
+           <Icon size={20} strokeWidth={2.5}/>
+         </div>
+         <span className="text-[15px] font-bold text-[var(--text)]">{title}</span>
+      </div>
+      {status === 'ok' ? (
+        <div className="flex items-center gap-1.5 bg-[#F0FDF4] text-[var(--success)] px-3 py-1.5 rounded-lg border border-[#bbf7d0] shadow-sm">
+          <CheckCircle2 size={14} strokeWidth={3} />
+          <span className="text-[10px] font-black uppercase tracking-widest">À jour</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1.5 bg-blue-50 text-[var(--primary)] px-3 py-1.5 rounded-lg border border-blue-100 shadow-sm">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--primary)] opacity-50"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--primary)]"></span>
+          </span>
+          <span className="text-[10px] font-black uppercase tracking-widest">Actif</span>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <PremiumScreen className="h-full z-[80] fixed inset-0 flex flex-col">
+      <Header title="Synchronisation SAV" onBack={onClose} />
+      <div className="px-6 py-6 flex-1 overflow-y-auto hide-scrollbar pb-10 animate-slide-in-right">
+         
+         <div className="flex flex-col items-center justify-center mb-10 mt-2">
+           <div className="relative mb-6">
+             <div className="absolute inset-0 bg-[var(--cyan)] rounded-full blur-[40px] opacity-20 animate-pulse"></div>
+             <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-lg relative z-10 border border-[var(--ice)]">
+               <Database size={40} className="text-[var(--primary)]" strokeWidth={2.5} />
+             </div>
+             <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[var(--success)] rounded-full border-4 border-white flex items-center justify-center z-20 shadow-sm">
+               <Check size={14} className="text-white" strokeWidth={4} />
+             </div>
+           </div>
+           <p className="text-[14px] font-medium text-[var(--text-muted)] text-center leading-relaxed px-4 max-w-[95%]">
+             Vos informations sont synchronisées avec notre système après-vente afin de vous offrir un suivi fiable et actualisé.
+           </p>
+         </div>
+
+         <h3 className="text-[13px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-4 px-2">État de la connexion</h3>
+         
+         <PremiumCard className="!p-0 mb-8 shadow-sm overflow-hidden border border-[var(--ice)]">
+           <SyncRow icon={User} title="Client identifié" status="ok" />
+           <SyncRow icon={Car} title="Véhicule associé" status="ok" />
+           <SyncRow icon={Calendar} title="Rendez-vous synchronisé" status="ok" />
+           <SyncRow icon={Activity} title="Intervention en cours" status="pending" />
+           <SyncRow icon={History} title="Historique disponible" status="ok" isLast />
+         </PremiumCard>
+
+         <div className="text-center pb-8">
+           <span className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest bg-white px-5 py-2.5 rounded-full border border-[var(--ice)] shadow-sm inline-block">
+             Dernière mise à jour : il y a 10 min
+           </span>
+         </div>
+      </div>
+    </PremiumScreen>
+  );
+};
 
 const ProfileNotificationsScreen = ({ onClose }) => {
   const [toggles, setToggles] = useState({ t1: true, t2: true, t3: false, t4: true });
@@ -1229,7 +1615,7 @@ const AddVehicleProfileScreen = ({ onClose, onAdd }) => {
 
   const handleSave = () => {
     onAdd({
-      id: Date.now(), // Génère un ID unique mocké
+      id: Date.now(), 
       name: `BYD ${model}`,
       vin: vin || "LC00000000000",
       km: parseInt(km) || 0,
@@ -1294,7 +1680,152 @@ const SelectVehicleScreen = ({ onClose, vehicles, activeVehicleId, onSelect }) =
   </PremiumScreen>
 );
 
-// --- GLOBAL OVERLAYS ---
+const ReportPreviewModal = ({ report, onClose }) => {
+  if (!report) return null;
+  return (
+    <PremiumScreen className="h-full z-[100] fixed inset-0 bg-transparent">
+      <div className="absolute inset-0 bg-[var(--primary-deep)]/70 backdrop-blur-md transition-opacity" onClick={onClose}></div>
+      <div className="absolute bottom-0 left-0 right-0 bg-[var(--bg-color)] rounded-t-[48px] p-8 shadow-[0_-20px_40px_rgba(0,0,0,0.3)] border-t border-white/50 animate-slide-up flex flex-col max-h-[85vh]">
+        <div className="w-16 h-1.5 bg-gray-300 rounded-full mx-auto mb-8 shrink-0"></div>
+        
+        <div className="overflow-y-auto hide-scrollbar pb-8 flex flex-col">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-[24px] font-black text-[var(--text)] tracking-tight leading-tight mb-2">{report.title}</h3>
+                <p className="text-[13px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{report.date}</p>
+              </div>
+              <div className="bg-[var(--ice)] px-4 py-2 rounded-[16px] shadow-inner border border-white">
+                <span className="text-[16px] font-black text-[var(--primary)]">{report.price}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mb-8">
+              <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-[14px] shadow-sm border border-[var(--ice)] text-[13px] font-bold text-[var(--text-muted)]">
+                <MapPin size={16} className="text-[var(--primary)]" /> {report.km}
+              </div>
+              <div className="flex items-center gap-2 bg-[#F0FDF4] px-4 py-2.5 rounded-[14px] shadow-sm border border-[#bbf7d0] text-[13px] font-bold text-[var(--success)]">
+                <CheckCircle2 size={16} /> Terminé
+              </div>
+            </div>
+
+            <h4 className="text-[15px] font-black text-[var(--text)] tracking-tight mb-4 px-1">Détails des opérations</h4>
+            <div className="bg-white rounded-[28px] p-6 shadow-sm border border-[var(--ice)] mb-8 flex flex-col gap-4">
+              {report.details.map((d, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-full bg-[var(--ice)] flex items-center justify-center text-[var(--primary)] shrink-0 border border-white shadow-inner"><Check size={14} strokeWidth={3}/></div>
+                  <span className="text-[15px] font-bold text-[var(--text)]">{d}</span>
+                </div>
+              ))}
+            </div>
+
+            <h4 className="text-[15px] font-black text-[var(--text)] tracking-tight mb-4 px-1">Note de l'expert BYD</h4>
+            <div className="bg-white rounded-[28px] p-6 shadow-sm border border-[var(--ice)] mb-8 flex items-start gap-4">
+              <div className="w-12 h-12 rounded-[20px] bg-[var(--bg-color)] flex items-center justify-center text-[var(--primary)] shrink-0 border border-[var(--ice)]"><User size={20} strokeWidth={2.5} /></div>
+              <p className="text-[14px] font-medium text-[var(--text-muted)] leading-relaxed italic pt-1">"{report.techNote}"</p>
+            </div>
+            
+            <Button variant="primary" fullWidth icon={Download} className="!py-4.5 !text-[16px] shrink-0" onClick={onClose}>Télécharger le rapport PDF</Button>
+        </div>
+      </div>
+    </PremiumScreen>
+  );
+};
+
+const RepairQuoteModal = ({ onClose, onAccept }) => {
+  const [isAccepted, setIsAccepted] = useState(false);
+
+  const handleAccept = () => {
+    setIsAccepted(true);
+    setTimeout(() => {
+      onAccept();
+      onClose();
+    }, 1500);
+  };
+
+  if (isAccepted) {
+    return (
+      <PremiumScreen className="h-full z-[100] fixed inset-0 bg-transparent">
+        <div className="absolute inset-0 bg-[var(--primary-deep)]/70 backdrop-blur-md"></div>
+        <div className="absolute bottom-0 left-0 right-0 bg-[var(--bg-color)] rounded-t-[48px] p-8 shadow-2xl flex flex-col items-center justify-center min-h-[50vh] animate-slide-up">
+          <div className="w-24 h-24 rounded-full bg-[var(--success)] flex items-center justify-center text-white mb-6 animate-pulse ring-8 ring-green-100">
+            <CheckCircle2 size={48} strokeWidth={2.5} />
+          </div>
+          <h3 className="text-[24px] font-black text-[var(--text)] mb-2 tracking-tight">Devis validé !</h3>
+          <p className="text-[15px] font-medium text-[var(--text-muted)] text-center max-w-[85%]">Merci pour votre confirmation. Les travaux reprennent immédiatement.</p>
+        </div>
+      </PremiumScreen>
+    );
+  }
+
+  return (
+    <PremiumScreen className="h-full z-[100] fixed inset-0 bg-transparent">
+      <div className="absolute inset-0 bg-[var(--primary-deep)]/70 backdrop-blur-md transition-opacity" onClick={onClose}></div>
+      <div className="absolute bottom-0 left-0 right-0 bg-[var(--bg-color)] rounded-t-[48px] p-8 shadow-[0_-20px_40px_rgba(0,0,0,0.3)] border-t border-white/50 animate-slide-up flex flex-col max-h-[90vh]">
+        <div className="w-16 h-1.5 bg-gray-300 rounded-full mx-auto mb-6 shrink-0"></div>
+        
+        <div className="overflow-y-auto hide-scrollbar pb-8 flex flex-col">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="bg-yellow-100 text-[var(--warning)] px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5"><AlertTriangle size={12} strokeWidth={3}/> Action requise</span>
+              </div>
+              <h3 className="text-[24px] font-black text-[var(--text)] tracking-tight leading-tight mb-1">Devis complémentaire</h3>
+              <p className="text-[13px] font-medium text-[var(--text-muted)] leading-relaxed max-w-[90%]">Validation requise pour poursuivre l’intervention</p>
+            </div>
+            <div className="bg-[var(--ice)] px-4 py-2 rounded-[16px] shadow-inner border border-white shrink-0">
+              <span className="text-[16px] font-black text-[var(--primary)]">1 450 DH</span>
+            </div>
+          </div>
+
+          <PremiumCard className="!p-5 my-6 flex flex-col gap-4 border-l-4 !border-l-[var(--warning)] shadow-sm">
+             <div>
+               <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1.5">Description de l'intervention</div>
+               <div className="text-[14px] font-bold text-[var(--text)] leading-snug">Remplacement des plaquettes de frein avant suite à une usure prononcée ( {'>'} 85% ) détectée lors du diagnostic.</div>
+             </div>
+             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[var(--ice)]">
+                <div>
+                   <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><Package size={14} className="text-[var(--primary)]"/> Pièces</div>
+                   <div className="text-[14px] font-black text-[var(--text)]">850 DH</div>
+                   <div className="text-[11px] font-medium text-[var(--text-muted)] mt-0.5">Jeu de plaquettes AV</div>
+                </div>
+                <div>
+                   <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><WrenchIcon size={14} className="text-[var(--primary)]"/> Main-d'œuvre</div>
+                   <div className="text-[14px] font-black text-[var(--text)]">600 DH</div>
+                   <div className="text-[11px] font-medium text-[var(--text-muted)] mt-0.5">1h30 estimée</div>
+                </div>
+             </div>
+          </PremiumCard>
+
+          <div className="flex items-center justify-between bg-white rounded-[20px] p-4 shadow-sm border border-[var(--ice)] mb-4 cursor-pointer hover:bg-gray-50 transition-colors">
+             <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-[16px] bg-[var(--bg-color)] flex items-center justify-center text-[var(--primary)] border border-[var(--ice)] shadow-inner"><FileText size={20} strokeWidth={2.5}/></div>
+                <div>
+                   <div className="text-[14px] font-black text-[var(--text)] tracking-tight">Devis_OR-2026-00482.pdf</div>
+                   <div className="text-[12px] font-medium text-[var(--text-muted)]">Document officiel (1.2 Mo)</div>
+                </div>
+             </div>
+             <button className="text-[var(--primary)] w-10 h-10 flex items-center justify-center bg-[var(--ice)] rounded-full transition-transform active:scale-95 shadow-sm"><Download size={18} strokeWidth={2.5}/></button>
+          </div>
+
+          <div className="flex items-center justify-between bg-[#F0FDF4] rounded-[20px] p-5 border border-[#bbf7d0] mb-8 shadow-sm">
+            <span className="text-[14px] font-black text-[var(--text)] tracking-tight">Délai estimé supplémentaire</span>
+            <span className="text-[14px] font-black text-[var(--success)]">+ 45 minutes</span>
+          </div>
+
+          <div className="flex flex-col gap-3 mt-auto">
+            <Button variant="primary" onClick={handleAccept} fullWidth className="!py-4.5 !text-[16px] shadow-[0_8px_24px_rgba(22,163,74,0.4)] !bg-gradient-to-r !from-[#16A34A] !to-[#15803d] border-t border-white/20">
+              <CheckCircle2 size={22}/> Accepter le devis
+            </Button>
+            <div className="flex gap-3">
+               <Button variant="secondary" onClick={onClose} className="flex-1 !py-4 !text-[14px] border-[var(--ice)] !text-[var(--danger)] bg-red-50/50 hover:bg-red-50"><X size={18}/> Refuser</Button>
+               <Button variant="secondary" className="flex-1 !py-4 !text-[14px] border-[var(--ice)] text-[var(--primary)]"><Phone size={18}/> Être rappelé</Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </PremiumScreen>
+  );
+};
 
 const BookingFlow = ({ onClose }) => {
   const [step, setStep] = useState(1);
@@ -1424,7 +1955,6 @@ const BookingFlow = ({ onClose }) => {
                  <div key={i} className="text-center text-[11px] font-black text-[var(--text-muted)] opacity-70">{d}</div>
                ))}
                
-               {/* Décalage pour commencer le mercredi (1er Mai 2024) */}
                <div className="col-span-2"></div>
                
                {Array.from({length: 31}).map((_, i) => {
@@ -1876,7 +2406,7 @@ const ChatbotScreen = ({ onClose }) => {
         ))}
         {messages.length === 1 && (
           <div className="flex flex-col gap-3 mt-4 animate-slide-up w-[85%] relative z-10">
-            {["📍 Où trouver une borne rapide ?", "💰 Quel forfait pour 30 000 km ?", "🚨 Comment marche l'assistance ?", "📅 Prendre rendez-vous atelier"].map((s, i) => (
+            {["📍 Où trouver un centre SAV ?", "💰 Quel forfait pour 30 000 km ?", "🚨 Comment marche l'assistance ?", "📅 Prendre rendez-vous atelier"].map((s, i) => (
               <button key={i} onClick={() => send(s.replace(/^[^\s]+\s/, ''))} className="bg-white border border-[var(--ice)] text-[var(--primary)] text-[14px] font-bold px-6 py-4 rounded-[24px] shadow-sm active:scale-95 text-left w-fit hover:bg-[var(--ice)] transition-colors border-l-4 border-l-[var(--primary)]">
                 {s}
               </button>
@@ -1909,18 +2439,12 @@ const ChatbotScreen = ({ onClose }) => {
 };
 
 const InteractiveMapScreen = ({ onClose }) => {
-  const [tab, setTab] = useState('centers');
-
   const centers = [
-    { n: "BYD Casa Anfa", t: "Vente & Service SAV", d: "2,1 km", v: "Casablanca", a: "Ouvert" },
-    { n: "BYD Rabat Agdal", t: "Service Après-vente", d: "85 km", v: "Rabat", a: "Ouvert" },
-    { n: "BYD Marrakech", t: "Vente & Service", d: "248 km", v: "Marrakech", a: "Fermé" }
-  ];
-
-  const bornes = [
-    { n: "MegaCharge Casa Anfa", p: "180 kW DC", d: "1,2 km", a: "2/4 dispos", badge: "Rapide" },
-    { n: "Station Total Oasis", p: "150 kW DC", d: "2,6 km", a: "3/6 dispos", badge: "Rapide" },
-    { n: "Green Energy Maarif", p: "22 kW AC", d: "3,4 km", a: "1/2 dispos", badge: "Standard" }
+    { n: "BYD Casa Anfa", t: "Showroom & SAV", d: "2,1 km", v: "Casablanca", a: "Ouvert" },
+    { n: "BYD Rabat Agdal", t: "Centre SAV", d: "85 km", v: "Rabat", a: "Ouvert" },
+    { n: "BYD Marrakech", t: "Concession & SAV", d: "248 km", v: "Marrakech", a: "Fermé" },
+    { n: "BYD Tanger", t: "Point de Service", d: "340 km", v: "Tanger", a: "Ouvert" },
+    { n: "Assistance Mobile", t: "Dépannage 24/7", d: "Intervention rapide", v: "National", a: "Dispo" }
   ];
 
   return (
@@ -1935,12 +2459,12 @@ const InteractiveMapScreen = ({ onClose }) => {
          {/* Main Active Pin */}
          <div className="absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
             <div className="w-16 h-16 gradient-blue rounded-full flex items-center justify-center text-white shadow-[0_12px_24px_rgba(0,40,94,0.4)] border-4 border-white z-10 animate-bounce relative">
-               {tab === 'centers' ? <WrenchIcon size={28} strokeWidth={2.5}/> : <Zap size={28} strokeWidth={2.5}/>}
+               <WrenchIcon size={28} strokeWidth={2.5}/>
                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[var(--success)] border-2 border-white rounded-full"></div>
             </div>
             <div className="w-4 h-4 bg-[var(--primary)] rotate-45 -mt-3 z-0 shadow-sm"></div>
             <div className="bg-white text-[12px] font-black uppercase tracking-widest px-4 py-2 rounded-[12px] shadow-lg mt-3 border border-[var(--ice)] text-[var(--primary)]">
-              {tab === 'centers' ? 'BYD Casa Anfa' : 'Super Charge Anfa'}
+              BYD Casa Anfa
             </div>
          </div>
 
@@ -1973,29 +2497,21 @@ const InteractiveMapScreen = ({ onClose }) => {
         <div className="px-6 py-4 shrink-0">
           <div className="relative">
             <Search size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" strokeWidth={2.5}/>
-            <input type="text" placeholder="Rechercher une ville, un centre..." className="w-full bg-white border border-[var(--ice)] shadow-sm rounded-[24px] pl-14 pr-5 py-4 text-[15px] font-bold focus:outline-none focus:border-[var(--cyan)] focus:ring-4 focus:ring-[var(--cyan)]/10 transition-all" />
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="px-6 mb-2 shrink-0">
-          <div className="flex bg-white/60 backdrop-blur-md p-1.5 rounded-[24px] border border-[var(--ice)] shadow-sm">
-            <button onClick={() => setTab('centers')} className={`flex-1 py-3.5 rounded-[20px] text-[14px] font-black transition-all duration-300 ${tab === 'centers' ? 'gradient-blue text-white shadow-[0_8px_16px_-6px_rgba(0,40,94,0.4)]' : 'bg-transparent text-[var(--text-muted)] hover:text-[var(--primary)]'}`}>Centres SAV</button>
-            <button onClick={() => setTab('bornes')} className={`flex-1 py-3.5 rounded-[20px] text-[14px] font-black transition-all duration-300 ${tab === 'bornes' ? 'gradient-blue text-white shadow-[0_8px_16px_-6px_rgba(0,40,94,0.4)]' : 'bg-transparent text-[var(--text-muted)] hover:text-[var(--primary)]'}`}>Bornes recharge</button>
+            <input type="text" placeholder="Rechercher un centre, showroom, ville..." className="w-full bg-white border border-[var(--ice)] shadow-sm rounded-[24px] pl-14 pr-5 py-4 text-[15px] font-bold focus:outline-none focus:border-[var(--cyan)] focus:ring-4 focus:ring-[var(--cyan)]/10 transition-all" />
           </div>
         </div>
 
         {/* List Content */}
         <div className="flex-1 overflow-y-auto px-6 pb-12 hide-scrollbar flex flex-col gap-4 pt-4">
-           {tab === 'centers' && centers.map((c, i) => (
+           {centers.map((c, i) => (
              <PremiumCard key={i} className="!p-5 shadow-sm hover:shadow-md group flex items-center gap-4">
                <div className="w-14 h-14 rounded-[20px] bg-[var(--ice)] border border-white shadow-inner flex items-center justify-center text-[var(--primary)] shrink-0 group-hover:scale-105 transition-transform">
-                 <WrenchIcon size={24} strokeWidth={2.5}/>
+                 {c.n === "Assistance Mobile" ? <AlertTriangle size={24} strokeWidth={2.5}/> : <WrenchIcon size={24} strokeWidth={2.5}/>}
                </div>
                <div className="flex-1">
                  <div className="flex justify-between items-start mb-1">
                    <div className="text-[16px] font-black text-[var(--text)] tracking-tight">{c.n}</div>
-                   <div className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${c.a==='Ouvert' ? 'bg-[#F0FDF4] text-[var(--success)]' : 'bg-red-50 text-[var(--danger)]'}`}>{c.a}</div>
+                   <div className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${c.a==='Ouvert' || c.a==='Dispo' ? 'bg-[#F0FDF4] text-[var(--success)]' : 'bg-red-50 text-[var(--danger)]'}`}>{c.a}</div>
                  </div>
                  <div className="text-[12px] font-medium text-[var(--text-muted)] mb-3">{c.t}</div>
                  <div className="flex items-center justify-between">
@@ -2008,224 +2524,7 @@ const InteractiveMapScreen = ({ onClose }) => {
                </div>
              </PremiumCard>
            ))}
-
-           {tab === 'bornes' && bornes.map((b, i) => (
-             <PremiumCard key={i} className="!p-5 shadow-sm hover:shadow-md group flex items-center gap-4">
-               <div className={`w-14 h-14 rounded-[20px] border shadow-inner flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${b.badge === 'Rapide' ? 'bg-[#FFFBEB] border-yellow-100 text-[var(--warning)]' : 'bg-[var(--ice)] border-white text-[var(--primary)]'}`}>
-                 <Zap size={24} strokeWidth={2.5}/>
-               </div>
-               <div className="flex-1">
-                 <div className="flex justify-between items-start mb-1">
-                   <div className="text-[16px] font-black text-[var(--text)] tracking-tight">{b.n}</div>
-                 </div>
-                 <div className="flex items-center gap-2 mb-3">
-                   <span className="text-[12px] font-bold text-[var(--text-muted)]">{b.p}</span>
-                   <span className="text-gray-300">•</span>
-                   <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] bg-[var(--bg-color)] px-2 py-0.5 rounded-md border border-[var(--ice)]">{b.badge}</span>
-                 </div>
-                 <div className="flex items-center justify-between">
-                   <div className="text-[13px] font-black text-[var(--primary)] bg-[var(--ice)] px-2.5 py-1 rounded-lg border border-blue-100">{b.d}</div>
-                   <div className="flex items-center gap-3">
-                     <span className="text-[11px] font-black text-[var(--success)] uppercase tracking-wider">{b.a}</span>
-                     <button className="w-9 h-9 gradient-blue rounded-full flex items-center justify-center text-white shadow-sm hover:brightness-110 transition-all"><ArrowRight size={18} strokeWidth={2.5}/></button>
-                   </div>
-                 </div>
-               </div>
-             </PremiumCard>
-           ))}
         </div>
-      </div>
-    </PremiumScreen>
-  );
-};
-
-const ChargingScreen = ({ onClose, onOpen }) => (
-  <PremiumScreen className="h-full z-50 fixed inset-0">
-    <Header title="Réseau de Recharge" onBack={onClose} />
-    <div className="px-6 py-2 flex-1 overflow-y-auto hide-scrollbar pb-10 mt-2">
-      
-      {/* Featured Station Card */}
-      <div className="gradient-blue rounded-[40px] p-8 text-white mb-8 shadow-[0_24px_48px_-12px_rgba(0,40,94,0.4)] relative overflow-hidden border border-white/20">
-        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-[var(--cyan)] rounded-full blur-[80px] opacity-40 mix-blend-screen pointer-events-none"></div>
-        <div className="absolute right-4 bottom-4 opacity-10 mix-blend-screen pointer-events-none"><Zap size={200} fill="white" /></div>
-        
-        <div className="relative z-10">
-          <div className="flex justify-between items-start mb-6">
-            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/30">
-              <span className="bg-[var(--success)] w-3 h-3 rounded-full shadow-[0_0_12px_#16A34A] border border-white"></span>
-              <span className="text-[11px] font-black tracking-widest uppercase">Disponible</span>
-            </div>
-            <div className="text-[11px] font-black uppercase tracking-widest bg-black/20 px-3 py-1.5 rounded-full border border-white/10">Rapide DC</div>
-          </div>
-          
-          <h3 className="text-[28px] font-black tracking-tight mb-2">BYD Super Charge</h3>
-          <p className="text-[15px] font-medium text-white/80 mb-8 flex items-center gap-2"><MapPin size={18}/> Ain Sebaâ, Casablanca</p>
-          
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            <div className="glass-panel-dark border-white/20 rounded-[24px] p-5 text-center shadow-inner">
-              <div className="text-[11px] font-black text-white/70 uppercase tracking-widest mb-1">Puissance Max</div>
-              <div className="font-black text-[24px]">350 <span className="text-[14px] font-medium">kW</span></div>
-            </div>
-            <div className="glass-panel-dark border-white/20 rounded-[24px] p-5 text-center shadow-inner">
-              <div className="text-[11px] font-black text-white/70 uppercase tracking-widest mb-1">Connecteurs dispos</div>
-              <div className="font-black text-[24px] text-[var(--cyan)]">4 <span className="text-[16px] text-white">/ 6</span></div>
-            </div>
-          </div>
-          
-          <Button onClick={() => onOpen('charging-reservation')} variant="glass" fullWidth className="!bg-white !text-[var(--primary)] border-white !py-4.5 !text-[16px]">Réserver un créneau</Button>
-        </div>
-      </div>
-
-      <h3 className="text-[18px] font-black text-[var(--text)] mb-4 px-2 tracking-tight">Bornes à proximité</h3>
-      <div className="flex flex-col gap-4">
-        {[
-          { n: "MegaCharge Casa Anfa", p: "180 kW DC", d: "1,2 km", a: "2/4", badge: "Rapide" },
-          { n: "Station Total Oasis", p: "150 kW DC", d: "2,6 km", a: "3/6", badge: "Rapide" },
-          { n: "Green Energy Maarif", p: "22 kW AC", d: "3,4 km", a: "1/2", badge: "Standard" }
-        ].map((b, i) => (
-          <PremiumCard key={i} className="!p-5 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md gap-2">
-            <div className="flex-1 pr-2">
-              <div className="flex items-center flex-wrap gap-2.5 mb-2.5">
-                <div className="text-[16px] font-black text-[var(--text)] tracking-tight leading-tight">{b.n}</div>
-                <span className="text-[9px] font-black bg-[var(--ice)] text-[var(--primary)] px-2.5 py-1 rounded-[6px] uppercase tracking-wider">{b.badge}</span>
-              </div>
-              <div className="text-[13px] font-bold text-[var(--text-muted)] flex items-center gap-1.5">
-                <Zap size={15} className="text-[var(--warning)]" strokeWidth={2.5}/> 
-                <span>{b.p}</span> 
-                <span className="text-gray-300 mx-1">•</span> 
-                <MapPin size={14} strokeWidth={2.5}/> 
-                <span>{b.d}</span>
-              </div>
-            </div>
-            <div className="shrink-0 bg-[#F0FDF4] text-[var(--success)] min-w-[76px] px-3 py-3 rounded-[12px] flex flex-col items-center justify-center border border-[#DCFCE7]">
-               <div className="text-[15px] font-black leading-none mb-1">{b.a}</div>
-               <div className="text-[10px] font-black uppercase tracking-widest">Dispos</div>
-            </div>
-          </PremiumCard>
-        ))}
-      </div>
-    </div>
-  </PremiumScreen>
-);
-
-const ChargingReservationScreen = ({ onClose }) => {
-  const [step, setStep] = useState(1);
-  const [duration, setDuration] = useState(30);
-  
-  return (
-    <PremiumScreen className="h-full z-[60] fixed inset-0 flex flex-col">
-      <Header 
-        title={step === 2 ? "" : "Réserver une borne"} 
-        onBack={step === 1 ? onClose : null} 
-        transparent={step === 2}
-        rightAction={<button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm border border-[var(--ice)] active:scale-95 text-[var(--text)]"><X size={24} strokeWidth={2.5}/></button>}
-      />
-      
-      {step === 1 && (
-        <div className="px-6 py-4 flex-1 overflow-y-auto hide-scrollbar pb-36 animate-slide-in-right">
-          {/* Info Borne */}
-          <PremiumCard className="!p-5 mb-8 flex items-center gap-4 bg-gradient-to-r from-[var(--bg-color)] to-white border-[var(--ice)] shadow-sm">
-             <div className="w-14 h-14 rounded-[20px] gradient-blue flex items-center justify-center text-[var(--cyan)] shadow-inner border border-white shrink-0">
-               <Zap size={28} strokeWidth={2.5} />
-             </div>
-             <div>
-               <div className="text-[16px] font-black text-[var(--text)] tracking-tight mb-1">BYD Super Charge</div>
-               <div className="text-[12px] font-bold text-[var(--text-muted)] flex items-center gap-1.5">
-                 <MapPin size={12}/> Ain Sebaâ <span className="text-gray-300">•</span> 350 kW DC
-               </div>
-             </div>
-          </PremiumCard>
-
-          {/* Date Selector */}
-          <h4 className="text-[16px] font-black text-[var(--text)] tracking-tight mb-4 px-1">Date de recharge</h4>
-          <div className="flex gap-3 overflow-x-auto hide-scrollbar mb-8 pb-2 -mx-6 px-6">
-             {['Auj 12', 'Dem 13', 'Mer 14', 'Jeu 15'].map((d, i) => (
-               <div key={i} className={`min-w-[80px] p-4 rounded-[20px] flex flex-col items-center gap-1 transition-all shadow-sm cursor-pointer ${i===0 ? 'gradient-blue text-white shadow-[0_8px_16px_-6px_rgba(0,40,94,0.4)] border-none' : 'bg-white border border-[var(--ice)] text-[var(--text)] hover:border-blue-200'}`}>
-                 <span className="text-[11px] font-black uppercase tracking-widest opacity-80">{d.split(' ')[0]}</span>
-                 <span className="text-[24px] font-black leading-none">{d.split(' ')[1]}</span>
-               </div>
-             ))}
-          </div>
-
-          {/* Time Selector */}
-          <div className="flex items-center justify-between px-1 mb-4">
-            <h4 className="text-[16px] font-black text-[var(--text)] tracking-tight">Créneaux disponibles</h4>
-            <span className="text-[11px] font-black bg-[#F0FDF4] text-[var(--success)] px-2.5 py-1 rounded-[8px] uppercase tracking-wider border border-green-100">4 Dispos</span>
-          </div>
-          <div className="grid grid-cols-3 gap-3 mb-8">
-             {['10:00', '10:30', '11:00', '11:30', '14:00', '14:30'].map((t, i) => (
-               <div key={i} className={`py-4 rounded-[18px] text-center text-[15px] font-black transition-all cursor-pointer shadow-sm ${i===1 ? 'bg-[var(--ice)] text-[var(--primary)] border-2 border-[var(--primary)]' : 'bg-white border border-[var(--ice)] text-[var(--text-muted)] hover:border-blue-200'}`}>
-                 {t}
-               </div>
-             ))}
-          </div>
-
-          {/* Duration Selector */}
-          <h4 className="text-[16px] font-black text-[var(--text)] tracking-tight mb-4 px-1">Durée estimée</h4>
-          <div className="flex gap-3">
-             {[30, 45, 60].map((mins) => (
-               <button 
-                 key={mins}
-                 onClick={() => setDuration(mins)}
-                 className={`flex-1 py-4 rounded-[20px] text-[14px] font-black transition-all shadow-sm ${duration === mins ? 'gradient-blue text-white' : 'bg-white border border-[var(--ice)] text-[var(--text-muted)]'}`}
-               >
-                 {mins} min
-               </button>
-             ))}
-          </div>
-          
-          <div className="mt-8 p-5 bg-gradient-to-br from-[#F0FDF4] to-white border border-[#bbf7d0] rounded-[24px] shadow-sm flex items-center justify-between">
-            <div>
-              <div className="text-[11px] font-black text-[var(--success)] uppercase tracking-widest mb-1">Tarif de charge</div>
-              <div className="text-[13px] font-bold text-green-700">Inclus avec BYD Silver</div>
-            </div>
-            <div className="text-[24px] font-black text-[var(--text)] tracking-tight">0 <span className="text-[14px]">DH</span></div>
-          </div>
-        </div>
-      )}
-
-      {step === 2 && (
-        <div className="flex-1 flex flex-col items-center justify-center text-center px-6 animate-slide-up pb-20">
-           <div className="relative mb-8">
-             <div className="absolute inset-0 bg-[var(--cyan)] rounded-full blur-[40px] opacity-40 animate-pulse"></div>
-             <div className="w-32 h-32 rounded-full gradient-blue flex items-center justify-center shadow-[0_20px_40px_-10px_rgba(0,40,94,0.5)] relative z-10 border-4 border-white">
-               <Zap size={56} className="text-[var(--cyan)]" strokeWidth={2.5} />
-             </div>
-           </div>
-           
-           <h2 className="text-[32px] font-black text-[var(--text)] mb-3 tracking-tight leading-none">Borne réservée !</h2>
-           <p className="text-[15px] font-medium text-[var(--text-muted)] mb-10 max-w-[85%] leading-relaxed">Votre session de charge est confirmée. Utilisez ce code sur la borne pour déverrouiller le câble.</p>
-           
-           <PremiumCard className="w-full !p-6 mb-10 bg-gradient-to-b from-white to-[var(--bg-color)] border-[var(--ice)] shadow-md">
-             <div className="flex flex-col items-center justify-center mb-6 pb-6 border-b border-[var(--ice)]">
-               <span className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-2">Code de déverrouillage</span>
-               <span className="text-[40px] font-black text-[var(--primary)] tracking-tight leading-none tracking-[0.1em]">8492</span>
-             </div>
-             
-             <div className="flex justify-between items-center px-2">
-               <div className="text-left">
-                 <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Date</div>
-                 <div className="text-[15px] font-black text-[var(--text)]">Auj, 10:30</div>
-               </div>
-               <div className="w-px h-8 bg-[var(--ice)]"></div>
-               <div className="text-right">
-                 <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Durée</div>
-                 <div className="text-[15px] font-black text-[var(--text)]">{duration} min</div>
-               </div>
-             </div>
-           </PremiumCard>
-        </div>
-      )}
-
-      <div className="absolute bottom-0 left-0 right-0 p-6 glass-panel border-t border-[var(--ice)] rounded-t-[40px] z-20">
-         {step === 1 ? (
-           <Button onClick={() => setStep(2)} fullWidth className="!py-4.5 !text-[16px]">Confirmer la réservation</Button>
-         ) : (
-           <div className="flex flex-col gap-3">
-             <Button variant="secondary" icon={MapPin} className="!py-4.5 !text-[15px]">Itinéraire vers la borne</Button>
-             <button onClick={onClose} className="py-3 text-[14px] font-bold text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors">Retour aux bornes</button>
-           </div>
-         )}
       </div>
     </PremiumScreen>
   );
@@ -2330,15 +2629,15 @@ const AccessoriesScreen = ({ onClose }) => (
     <Header title="Boutique Accessoires" onBack={onClose} />
     <div className="px-6 py-4 flex-1 overflow-y-auto hide-scrollbar pb-10">
       <div className="flex gap-2 overflow-x-auto hide-scrollbar mb-8 pb-2 -mx-6 px-6">
-         {['Tous les articles', 'Intérieur', 'Recharge', 'Extérieur'].map((c, i) => (
+         {['Tous les articles', 'Intérieur', 'Extérieur', 'Entretien'].map((c, i) => (
            <span key={i} className={`px-5 py-2.5 rounded-[16px] text-[13px] font-bold whitespace-nowrap shadow-sm transition-colors ${i===0 ? 'gradient-blue text-white' : 'bg-white border border-[var(--ice)] text-[var(--text-muted)]'}`}>{c}</span>
          ))}
        </div>
        <div className="grid grid-cols-2 gap-4">
          {[
            { n: "Tapis 3D Premium", p: "850 DH", s: "En stock", c: "Intérieur" },
-           { n: "Borne Murale 7kW", p: "4 500 DH", s: "Sur commande", c: "Recharge" },
-           { n: "Câble Type 2", p: "1 200 DH", s: "En stock", c: "Recharge" },
+           { n: "Kit de nettoyage pro", p: "450 DH", s: "En stock", c: "Entretien" },
+           { n: "Housse de protection", p: "1 200 DH", s: "En stock", c: "Extérieur" },
            { n: "Barres de toit", p: "2 100 DH", s: "Stock limité", c: "Extérieur" }
          ].map((a, i) => (
            <PremiumCard key={i} className="!p-5 flex flex-col justify-between shadow-sm cursor-pointer hover:shadow-md transition-shadow">
@@ -2546,7 +2845,7 @@ const ManualsScreen = ({ onClose, activeVehicle }) => {
     { title: "Guide de Démarrage Rapide", desc: "L'essentiel pour prendre la route", size: "2.3 Mo", type: "PDF", icon: Zap, cat: "Manuels" },
     { title: "Système Multimédia & Connectivité", desc: "Configuration du système DiLink", size: "5.1 Mo", type: "PDF", icon: Smartphone, cat: "Technologie" },
     { title: "Carnet d'Entretien & Garantie", desc: "Préconisations et couverture", size: "1.8 Mo", type: "PDF", icon: Shield, cat: "Entretien" },
-    { title: "Tutoriel : Recharge optimale", desc: "Astuces pour préserver la batterie", size: "3:45", type: "Vidéo", icon: PlayCircle, cat: "Vidéos" },
+    { title: "Tutoriel : Entretien optimal", desc: "Astuces pour préserver votre véhicule", size: "3:45", type: "Vidéo", icon: PlayCircle, cat: "Vidéos" },
     { title: "Tutoriel : Stationnement auto", desc: "Utilisation des caméras 360°", size: "2:10", type: "Vidéo", icon: PlayCircle, cat: "Vidéos" }
   ];
 
@@ -2622,48 +2921,95 @@ const ManualsScreen = ({ onClose, activeVehicle }) => {
   );
 };
 
-const NotificationsOverlay = ({ onClose, onOpen }) => (
-  <div className="absolute inset-0 z-[60] flex flex-col animate-fade-in">
-    <div className="absolute inset-0 bg-[var(--primary-deep)]/70 backdrop-blur-md" onClick={onClose}></div>
-    <div className="relative mt-32 bg-[var(--bg-color)] flex-1 rounded-t-[48px] flex flex-col shadow-[0_-20px_40px_rgba(0,0,0,0.3)] border-t border-white/50">
-       <div className="w-16 h-1.5 bg-gray-300 rounded-full mx-auto mt-4 mb-6"></div>
-       <div className="px-8 flex justify-between items-center mb-8">
-         <h2 className="text-[28px] font-black text-[var(--text)] tracking-tight">Notifications</h2>
-         <button onClick={onClose} className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-[var(--ice)] text-[var(--text)] active:scale-95"><X size={24} strokeWidth={2.5}/></button>
-       </div>
-       <div className="flex-1 overflow-y-auto px-6 pb-12 flex flex-col gap-4 hide-scrollbar">
-         <PremiumCard className="!p-6 border-l-4 !border-l-[var(--primary)] bg-gradient-to-r from-white to-[var(--ice)]/40 shadow-md">
-           <div className="flex justify-between items-start mb-4">
-             <div className="flex items-center gap-2 text-[11px] font-black text-[var(--primary)] uppercase tracking-widest bg-[var(--ice)] px-3 py-1 rounded-md">
-               <WrenchIcon size={14} strokeWidth={2.5}/> Rappel atelier
-             </div>
-             <span className="text-[11px] font-bold text-[var(--text-muted)]">Il y a 2h</span>
+const NotificationsOverlay = ({ onClose, onOpen, onNavigateTab }) => {
+  const [notifications, setNotifications] = useState([
+    { id: 0, badge: "Suivi SAV", title: "Devis complémentaire", desc: "Une validation est requise pour poursuivre les réparations.", time: "À l'instant", icon: AlertTriangle, unread: true },
+    { id: 1, badge: "Suivi SAV", title: "Rapport SAV disponible", desc: "Le rapport d'intervention de votre BYD est prêt à être téléchargé.", time: "Il y a 5 min", icon: FileText, unread: true },
+    { id: 2, badge: "Entretien", title: "Entretien recommandé", desc: "Votre cap des 30 000 km approche. Pensez à planifier votre visite.", time: "Il y a 10 min", icon: WrenchIcon, unread: true },
+    { id: 3, badge: "Suivi SAV", title: "Véhicule prêt", desc: "Votre BYD ATTO 3 est prête. Vous pouvez passer la récupérer en centre.", time: "Il y a 45 min", icon: CheckCircle2, unread: true },
+    { id: 4, badge: "Rendez-vous", title: "Rendez-vous confirmé", desc: "Votre rendez-vous SAV est confirmé pour mardi prochain à 10h30.", time: "Aujourd'hui, 09:15", icon: Calendar, unread: false },
+    { id: 5, badge: "Offre SAV", title: "Contrôle de printemps", desc: "Profitez de -20% sur le forfait entretien exclusif BYD.", time: "Hier, 16:45", icon: Gift, unread: false },
+    { id: 6, badge: "Document", title: "Facture disponible", desc: "Votre facture d'intervention est prête et disponible au téléchargement.", time: "Hier, 14:00", icon: Download, unread: false },
+    { id: 7, badge: "Véhicule", title: "Véhicule ajouté", desc: "Votre véhicule BYD HAN a bien été ajouté à votre garage virtuel.", time: "Hier, 11:20", icon: Car, unread: false },
+    { id: 8, badge: "Système", title: "Synchronisation Autoline", desc: "Vos données SAV ont été mises à jour avec succès.", time: "Hier, 10:05", icon: Database, unread: false },
+    { id: 9, badge: "Document", title: "Manuel disponible", desc: "Le manuel d'utilisation de votre système DiLink est disponible.", time: "Hier, 09:30", icon: BookOpen, unread: false },
+    { id: 10, badge: "Fidélité", title: "Points crédités", desc: "Félicitations, vous avez gagné 120 points fidélité suite à votre visite.", time: "Hier, 08:45", icon: Star, unread: false },
+  ]);
+
+  const handleNotifClick = (n) => {
+     setNotifications(prev => prev.map(notif => notif.id === n.id ? { ...notif, unread: false } : notif));
+     onClose();
+     
+     switch(n.badge) {
+       case "Suivi SAV":
+       case "Entretien":
+         if (onNavigateTab) onNavigateTab('suivi');
+         break;
+       case "Rendez-vous":
+         onOpen('booking');
+         break;
+       case "Offre SAV":
+         onOpen('offers');
+         break;
+       case "Véhicule":
+         if (onNavigateTab) onNavigateTab('profil');
+         break;
+       case "Système":
+         onOpen('autoline-sync');
+         break;
+       case "Document":
+         if (n.title.toLowerCase().includes("manuel")) {
+           onOpen('manuals');
+         } else {
+           if (onNavigateTab) onNavigateTab('suivi');
+         }
+         break;
+       case "Fidélité":
+         onOpen('loyalty');
+         break;
+       default:
+         if (onNavigateTab) onNavigateTab('suivi');
+     }
+  };
+
+  return (
+    <div className="absolute inset-0 z-[60] flex flex-col animate-fade-in">
+      <div className="absolute inset-0 bg-[var(--primary-deep)]/70 backdrop-blur-md" onClick={onClose}></div>
+      <div className="relative mt-32 bg-[var(--bg-color)] flex-1 rounded-t-[48px] flex flex-col shadow-[0_-20px_40px_rgba(0,0,0,0.3)] border-t border-white/50">
+         <div className="w-16 h-1.5 bg-gray-300 rounded-full mx-auto mt-4 mb-6 shrink-0"></div>
+         <div className="px-8 flex justify-between items-center mb-8 shrink-0">
+           <div className="flex items-center gap-3">
+             <h2 className="text-[28px] font-black text-[var(--text)] tracking-tight">Notifications</h2>
+             {notifications.filter(n => n.unread).length > 0 && (
+               <div className="bg-[var(--danger)] text-white text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-sm">
+                 {notifications.filter(n => n.unread).length}
+               </div>
+             )}
            </div>
-           <p className="text-[18px] font-black text-[var(--text)] mb-2 tracking-tight">Votre BYD approche des 30 000 km.</p>
-           <p className="text-[14px] font-medium text-[var(--text-muted)] mb-5 leading-relaxed">Il est temps de planifier votre entretien périodique pour préserver votre garantie et vos performances.</p>
-           <button onClick={() => { onClose(); onOpen('booking'); }} className="text-[14px] font-bold text-white bg-[var(--primary)] px-5 py-2.5 rounded-[14px] shadow-md hover:bg-[var(--primary-dark)] transition-colors w-fit">Planifier maintenant</button>
-         </PremiumCard>
-         <PremiumCard className="!p-6 shadow-sm">
-           <div className="flex justify-between items-start mb-4">
-             <div className="flex items-center gap-2 text-[11px] font-black text-[var(--warning)] uppercase tracking-widest bg-yellow-50 px-3 py-1 rounded-md">
-               <Star size={14} className="fill-[var(--warning)]"/> Offre exclusive
-             </div>
-             <span className="text-[11px] font-bold text-[var(--text-muted)]">Hier</span>
-           </div>
-           <p className="text-[16px] font-black text-[var(--text)] mb-3 tracking-tight">-20% sur le contrôle de printemps.</p>
-           <button onClick={() => { onClose(); onOpen('offers'); }} className="text-[14px] font-bold text-[var(--accent)] hover:underline">Découvrir l'offre</button>
-         </PremiumCard>
-         <PremiumCard className="!p-6 opacity-70 shadow-sm">
-           <div className="flex justify-between items-start mb-4">
-             <div className="flex items-center gap-2 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest bg-gray-100 px-3 py-1 rounded-md">
-               <FileText size={14} strokeWidth={2.5}/> Facturation
-             </div>
-             <span className="text-[11px] font-bold text-[var(--text-muted)]">12 janv</span>
-           </div>
-           <p className="text-[16px] font-black text-[var(--text)] mb-4 tracking-tight">Votre dernière facture est disponible.</p>
-           <button className="text-[13px] font-bold text-[var(--text-muted)] flex items-center gap-1.5 bg-[var(--bg-color)] w-fit px-4 py-2.5 rounded-xl border border-[var(--ice)]"><Download size={16} strokeWidth={2.5}/> Télécharger PDF</button>
-         </PremiumCard>
-       </div>
+           <button onClick={onClose} className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-[var(--ice)] text-[var(--text)] active:scale-95"><X size={24} strokeWidth={2.5}/></button>
+         </div>
+         <div className="flex-1 overflow-y-auto px-6 pb-12 flex flex-col gap-4 hide-scrollbar">
+           {notifications.map((n) => {
+             const Icon = n.icon;
+             return (
+               <PremiumCard key={n.id} onClick={() => handleNotifClick(n)} className={`!p-5 cursor-pointer hover:shadow-md transition-all relative overflow-hidden ${n.unread ? 'bg-gradient-to-r from-blue-50/50 to-white border-l-4 !border-l-[var(--primary)] shadow-sm' : 'opacity-80 shadow-none'}`}>
+                  {n.unread && <div className="absolute top-5 right-5 w-2 h-2 bg-[var(--primary)] rounded-full animate-pulse shadow-[0_0_8px_rgba(0,40,94,0.4)]"></div>}
+                  <div className="flex justify-between items-start mb-3">
+                    <div className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${n.unread ? 'bg-[var(--ice)] text-[var(--primary)]' : 'bg-gray-100 text-[var(--text-muted)]'}`}>
+                      <Icon size={12} strokeWidth={2.5}/> {n.badge}
+                    </div>
+                    <span className={`text-[11px] font-bold mt-1 ${n.unread ? 'text-[var(--primary)] pr-4' : 'text-[var(--text-muted)]'}`}>{n.time}</span>
+                  </div>
+                  <p className={`text-[16px] tracking-tight mb-1.5 ${n.unread ? 'font-black text-[var(--text)]' : 'font-bold text-[var(--text)]'}`}>{n.title}</p>
+                  <p className="text-[13px] font-medium text-[var(--text-muted)] leading-relaxed">{n.desc}</p>
+               </PremiumCard>
+             );
+           })}
+         </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+
+
