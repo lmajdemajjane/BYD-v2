@@ -3,9 +3,13 @@ import {
   Car, Wrench, Calendar, MapPin, Zap, Phone, MessageSquare, 
   ChevronRight, ChevronLeft, Bell, Search, Shield, History, 
   Settings, User, Map, Battery, AlertTriangle, CheckCircle2, 
-  Download, ChevronDown, Star, Filter, ArrowRight, X, Wrench as WrenchIcon, Plus, LogOut, FileText, ShoppingBag, Gift, Info,
-  Disc, Cpu, Wind, Package, Paperclip, Mic, Check, Mail, Globe, Smartphone, Lock, Edit2, BookOpen, PlayCircle, Activity, Database, Hash, Clock
+  Download, ChevronDown, Star, Filter, ArrowRight, X, Plus, LogOut, FileText, ShoppingBag, Gift, Info,
+  Disc, Cpu, Wind, Package, Paperclip, Mic, Check, Mail, Globe, Smartphone, Lock, Edit2, BookOpen, PlayCircle, Activity, Database
 } from 'lucide-react';
+
+// Renommage de Wrench lors de l'utilisation si besoin, mais vous l'aviez importé deux fois dans l'original (Wrench et Wrench as WrenchIcon).
+// On va juste utiliser WrenchIcon pour s'aligner sur votre code.
+const WrenchIcon = Wrench;
 
 // --- ASSETS OFFICIELS BYD (Remplacés par des versions PNG Transparentes) ---
 const ASSETS = {
@@ -203,7 +207,8 @@ export default function App() {
   const [activeOverlay, setActiveOverlay] = useState(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
-  const [currentRepairStep, setCurrentRepairStep] = useState(5); // Étape devis par défaut
+  const [currentRepairStep, setCurrentRepairStep] = useState(5);
+  const [selectedProfileVehicle, setSelectedProfileVehicle] = useState(null);
 
   const [vehicles, setVehicles] = useState([
     { id: 1, name: "BYD HAN", vin: "LC99999999999", km: 15200, img: ASSETS.han },
@@ -211,6 +216,10 @@ export default function App() {
   ]);
   const [activeVehicleId, setActiveVehicleId] = useState(1);
   const activeVehicle = vehicles.find(v => v.id === activeVehicleId) || vehicles[0];
+
+  // In-app maintenance popup states
+  const [showMaintenancePopup, setShowMaintenancePopup] = useState(false);
+  const [hasShownPopup, setHasShownPopup] = useState(false);
 
   const handleAddVehicle = (newVehicle) => {
     setVehicles([...vehicles, newVehicle]);
@@ -224,12 +233,30 @@ export default function App() {
     }
   }, [currentView]);
 
+  // Maintenance Popup Effect
+  useEffect(() => {
+    let timer;
+    if (currentView === 'main' && !hasShownPopup) {
+      timer = setTimeout(() => {
+        setShowMaintenancePopup(true);
+        setHasShownPopup(true);
+      }, 45000); // 45 seconds
+    }
+    return () => clearTimeout(timer);
+  }, [currentView, hasShownPopup]);
+
   const navigateTo = (view) => setCurrentView(view);
   const openOverlay = (overlay) => setActiveOverlay(overlay);
   const closeOverlay = () => setActiveOverlay(null);
 
+  const handleNotificationAction = (action, overlay, tab) => {
+    setNotificationsOpen(false);
+    if (tab) setActiveTab(tab);
+    if (overlay) openOverlay(overlay);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center py-10 relative">
+    <div className="min-h-screen flex items-center justify-center py-10 relative bg-[#0b1120]">
       <style>{THEME}</style>
       
       {/* Phone Frame */}
@@ -253,7 +280,7 @@ export default function App() {
               {activeTab === 'services' && <ServicesTab onOpen={openOverlay} />}
               {activeTab === 'suivi' && <HistoryTab onOpenReport={(report) => { setSelectedReport(report); openOverlay('report-preview'); }} currentRepairStep={currentRepairStep} onOpenQuote={() => openOverlay('repair-quote')} />}
               {activeTab === 'explorer' && <ExploreTab onOpen={openOverlay} />}
-              {activeTab === 'profil' && <ProfileTab onNavigate={navigateTo} onOpen={openOverlay} vehicles={vehicles} setVehicles={setVehicles} activeVehicleId={activeVehicleId} setActiveVehicleId={setActiveVehicleId} />}
+              {activeTab === 'profil' && <ProfileTab onNavigate={navigateTo} onOpen={openOverlay} vehicles={vehicles} setVehicles={setVehicles} activeVehicleId={activeVehicleId} setActiveVehicleId={setActiveVehicleId} onOpenVehicleDetails={(v) => { setSelectedProfileVehicle(v); openOverlay('vehicle-details'); }} />}
             </div>
 
             {/* Premium Floating Bottom Navigation */}
@@ -269,8 +296,8 @@ export default function App() {
             {activeOverlay && (
               <div className="absolute inset-0 z-50 flex flex-col bg-transparent">
                 {activeOverlay === 'booking' && <BookingFlow onClose={closeOverlay} />}
-                {activeOverlay === 'simulator' && <SimulatorScreen onClose={closeOverlay} onBook={() => openOverlay('booking')} />}
-                {activeOverlay === 'emergency' && <EmergencyScreen onClose={closeOverlay} />}
+                {activeOverlay === 'simulator' && <SimulatorScreen onClose={closeOverlay} />}
+                {activeOverlay === 'emergency' && <EmergencyScreen onClose={closeOverlay} onOpen={openOverlay} />}
                 {activeOverlay === 'chatbot' && <ChatbotScreen onClose={closeOverlay} />}
                 {activeOverlay === 'map' && <InteractiveMapScreen onClose={closeOverlay} />}
                 {activeOverlay === 'faq' && <FAQScreen onClose={closeOverlay} />}
@@ -284,11 +311,11 @@ export default function App() {
                 
                 {/* Profile specific Overlays */}
                 {activeOverlay === 'personal-info' && <PersonalInfoScreen onClose={closeOverlay} />}
-                {activeOverlay === 'autoline-sync' && <AutolineSyncScreen onClose={closeOverlay} />}
                 {activeOverlay === 'profile-notifications' && <ProfileNotificationsScreen onClose={closeOverlay} />}
                 {activeOverlay === 'app-settings' && <AppSettingsScreen onClose={closeOverlay} />}
                 {activeOverlay === 'privacy' && <PrivacyScreen onClose={closeOverlay} />}
                 {activeOverlay === 'add-vehicle-profile' && <AddVehicleProfileScreen onClose={closeOverlay} onAdd={handleAddVehicle} />}
+                {activeOverlay === 'vehicle-details' && selectedProfileVehicle && <VehicleDetailsScreen vehicle={selectedProfileVehicle} onClose={closeOverlay} vehicles={vehicles} setVehicles={setVehicles} activeVehicleId={activeVehicleId} setActiveVehicleId={setActiveVehicleId} />}
                 {activeOverlay === 'select-vehicle' && <SelectVehicleScreen onClose={closeOverlay} vehicles={vehicles} activeVehicleId={activeVehicleId} onSelect={(id) => { setActiveVehicleId(id); closeOverlay(); }} />}
                 {activeOverlay === 'manuals' && <ManualsScreen onClose={closeOverlay} activeVehicle={activeVehicle} />}
               </div>
@@ -296,11 +323,23 @@ export default function App() {
 
             {/* Notifications Overlay */}
             {notificationsOpen && (
-              <NotificationsOverlay onClose={() => setNotificationsOpen(false)} onOpen={openOverlay} onNavigateTab={setActiveTab} />
+              <NotificationsOverlay onClose={() => setNotificationsOpen(false)} onAction={handleNotificationAction} />
+            )}
+
+            {/* In-app Maintenance Popup */}
+            {showMaintenancePopup && (
+              <MaintenancePopup 
+                vehicle={activeVehicle} 
+                onClose={() => setShowMaintenancePopup(false)} 
+                onPlanify={() => {
+                  setShowMaintenancePopup(false);
+                  openOverlay('simulator');
+                }} 
+              />
             )}
 
             {/* Global Floating Chatbot Button */}
-            {activeOverlay !== 'chatbot' && (
+            {activeOverlay !== 'chatbot' && activeOverlay !== 'simulator' && (
               <button 
                 onClick={() => openOverlay('chatbot')}
                 className="absolute bottom-28 right-6 w-14 h-14 bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] rounded-full flex items-center justify-center text-white shadow-[0_12px_28px_rgba(0,40,94,0.4)] z-[55] active:scale-95 transition-all border border-white/20 hover:scale-105 group"
@@ -330,6 +369,62 @@ const NavItem = ({ icon: Icon, label, active, onClick }) => (
       {label}
     </span>
   </button>
+);
+
+// --- MAINTENANCE IN-APP POPUP ---
+const MaintenancePopup = ({ vehicle, onClose, onPlanify }) => (
+  <PremiumScreen className="h-full z-[100] fixed inset-0 bg-transparent">
+    <div className="absolute inset-0 bg-[var(--primary-deep)]/70 backdrop-blur-md transition-opacity" onClick={onClose}></div>
+    <div className="absolute bottom-0 left-0 right-0 bg-[var(--bg-color)] rounded-t-[48px] p-8 shadow-[0_-20px_40px_rgba(0,0,0,0.3)] border-t border-white/50 animate-slide-up flex flex-col">
+      <div className="w-16 h-1.5 bg-gray-300 rounded-full mx-auto mb-6 shrink-0"></div>
+
+      <div className="flex items-center gap-4 mb-6">
+        <div className="w-16 h-16 bg-[#F0FDF4] rounded-[24px] flex items-center justify-center text-[var(--success)] shadow-inner border border-[#bbf7d0]">
+          <WrenchIcon size={32} strokeWidth={2.5}/>
+        </div>
+        <div>
+          <h3 className="text-[24px] font-black text-[var(--text)] tracking-tight leading-tight">Entretien recommandé</h3>
+        </div>
+      </div>
+
+      <p className="text-[15px] font-medium text-[var(--text-muted)] mb-8 leading-relaxed">
+        Votre véhicule approche du seuil recommandé pour un entretien SAV. Planifiez votre passage dans un centre BYD.
+      </p>
+
+      <PremiumCard className="!p-5 mb-8 border-l-4 !border-l-[var(--success)] shadow-sm">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-3">
+             <Car size={20} className="text-[var(--primary)]" />
+             <span className="text-[16px] font-black text-[var(--text)]">{vehicle.name}</span>
+          </div>
+          <span className="text-[13px] font-bold text-[var(--text-muted)] bg-[var(--ice)] px-2 py-1 rounded-md">{vehicle.km.toLocaleString()} km</span>
+        </div>
+        <div className="pt-4 border-t border-[var(--ice)] flex flex-col gap-3">
+           <div className="flex justify-between items-center">
+              <span className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest">Recommandation</span>
+              <span className="text-[14px] font-black text-[var(--primary)]">Forfait Essentiel</span>
+           </div>
+           <div className="flex justify-between items-center">
+              <span className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest">Durée estimée</span>
+              <span className="text-[14px] font-bold text-[var(--text)]">1h30</span>
+           </div>
+           <div className="flex justify-between items-center">
+              <span className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest">Prix estimatif</span>
+              <span className="text-[14px] font-black text-[var(--success)]">à partir de 1 200 DH</span>
+           </div>
+        </div>
+      </PremiumCard>
+
+      <div className="flex flex-col gap-3 mt-auto">
+        <Button variant="primary" onClick={onPlanify} fullWidth className="!py-4.5 !text-[16px]">
+          Planifier maintenant
+        </Button>
+        <button onClick={onClose} className="py-4 text-[15px] font-bold text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
+          Plus tard
+        </button>
+      </div>
+    </div>
+  </PremiumScreen>
 );
 
 // --- AUTH SCREENS ---
@@ -469,15 +564,15 @@ const VehicleRecognitionScreen = ({ onNavigate }) => {
 
   const steps = [
     { icon: User, text: "Recherche du profil client" },
-    { icon: Shield, text: "Connexion sécurisée Autoline" },
+    { icon: Shield, text: "Connexion sécurisée" },
     { icon: Database, text: "Recherche des véhicules associés" }
   ];
 
   return (
     <PremiumScreen className="relative flex flex-col justify-center px-8">
-      {/* Bouton de démo corrigé (discret et premium) */}
-      <button onClick={() => setIsVehicleFound(!isVehicleFound)} className="absolute top-12 right-6 bg-white/80 backdrop-blur-md px-4 py-2 rounded-full text-[var(--text-muted)] text-[10px] font-bold uppercase tracking-widest z-50 border border-[var(--ice)] shadow-sm hover:shadow-md hover:text-[var(--primary)] transition-all">
-        {isVehicleFound ? 'Mode présentation : Véhicule trouvé' : 'Mode présentation : Aucun véhicule'}
+      {/* Bouton de démo */}
+      <button onClick={() => setIsVehicleFound(!isVehicleFound)} className="absolute top-12 right-6 bg-white px-3 py-1.5 rounded-full text-[var(--text-muted)] text-[10px] font-bold uppercase tracking-widest z-50 border border-[var(--ice)] shadow-sm hover:bg-[var(--ice)] transition-colors">
+        Mode présentation : {isVehicleFound ? 'Véhicule trouvé' : 'Aucun véhicule'}
       </button>
       
       {/* Background Radar Animation (Light Theme) */}
@@ -778,9 +873,9 @@ const HomeTab = ({ onOpen, onNotifications, activeVehicle, onNavigateTab }) => (
           <div className="grid grid-cols-2 gap-4">
             <div className="glass-panel-dark rounded-[20px] p-4 flex flex-col gap-1">
                <div className="text-[10px] text-white/60 font-black uppercase tracking-widest flex items-center gap-1.5">
-                 <Zap size={14} strokeWidth={2.5} className="text-[var(--cyan)]"/> Autonomie
+                 <History size={14} strokeWidth={2.5} className="text-[var(--cyan)]"/> Dernier SAV
                </div>
-               <div className="font-black text-[20px]">420 <span className="text-[12px] font-bold text-white/70">km</span></div>
+               <div className="font-black text-[18px] tracking-tight">12 Janv 2024</div>
             </div>
             <div className="glass-panel-dark rounded-[20px] p-4 flex flex-col gap-1">
                <div className="text-[10px] text-white/60 font-black uppercase tracking-widest flex items-center gap-1.5">
@@ -801,9 +896,9 @@ const HomeTab = ({ onOpen, onNotifications, activeVehicle, onNavigateTab }) => (
     <div className="px-6 mb-10">
       <div className="grid grid-cols-4 gap-3">
         <QuickAction icon={Calendar} label="Rendez-vous" onClick={() => onOpen('booking')} />
-        <QuickAction icon={WrenchIcon} label="Simulateur" onClick={() => onOpen('simulator')} />
+        <QuickAction icon={WrenchIcon} label="Forfaits SAV" onClick={() => onOpen('simulator')} />
         <QuickAction icon={Activity} label="Suivi réparation" onClick={() => onNavigateTab('suivi')} />
-        <QuickAction icon={AlertTriangle} label="Dépannage" onClick={() => onOpen('emergency')} variant="danger" />
+        <QuickAction icon={Phone} label="Assistance" onClick={() => onOpen('emergency')} variant="danger" />
       </div>
     </div>
 
@@ -885,7 +980,7 @@ const ServicesTab = ({ onOpen }) => (
     </div>
 
     <div className="flex flex-col gap-4">
-      <ServiceHorizontal icon={AlertTriangle} title="Service dépannage" desc="Assistance 24/7 en cas d'urgence." onClick={() => onOpen('emergency')} danger />
+      <ServiceHorizontal icon={Phone} title="Assistance téléphonique" desc="Notre équipe est à votre écoute en cas de besoin." onClick={() => onOpen('emergency')} danger />
       <ServiceHorizontal icon={Map} title="Carte & Réseau BYD" desc="Localisez les centres SAV, showrooms et points de service BYD au Maroc." onClick={() => onOpen('map')} />
       <ServiceHorizontal icon={FileText} title="Manuels & Guides" desc="Téléchargez la documentation de votre véhicule." onClick={() => onOpen('manuals')} />
     </div>
@@ -917,9 +1012,9 @@ const HistoryTab = ({ onOpenReport, currentRepairStep, onOpenQuote }) => {
   const [isServiceActive, setIsServiceActive] = useState(true);
 
   const interventionsData = [
-    { id: 1, date: "24 MAI 2024", km: "30 000 km", category: "Entretien", title: "Entretien périodique", price: "2 150 DH", details: ["Filtre à air", "Filtre d'habitacle", "Diagnostic complet"], isRecent: true, techNote: "L'état général du véhicule est excellent. La batterie Blade affiche un SOH de 99%." },
-    { id: 2, date: "12 JANV 2024", km: "20 000 km", category: "Révision", title: "Révision générale", price: "1 850 DH", details: ["Huile moteur", "Filtre à huile", "Pression pneus"], isRecent: false, techNote: "Niveaux de fluides complétés. Plaquettes de frein avant à 70%." },
-    { id: 3, date: "18 SEPT 2023", km: "12 500 km", category: "Contrôle", title: "Contrôle & diagnostic", price: "480 DH", details: ["Vérification électronique", "Mise à jour système"], isRecent: false, techNote: "Mise à jour du système d'infodivertissement (V2.1) effectuée avec succès. Aucun défaut signalé." },
+    { id: 1, date: "24 MAI 2024", km: "30 000 km", category: "Entretien", title: "Entretien périodique", details: ["Filtre à air", "Filtre d'habitacle", "Diagnostic complet"], isRecent: true, techNote: "L'état général du véhicule est excellent. La batterie Blade affiche un SOH de 99%." },
+    { id: 2, date: "12 JANV 2024", km: "20 000 km", category: "Révision", title: "Révision générale", details: ["Huile moteur", "Filtre à huile", "Pression pneus"], isRecent: false, techNote: "Niveaux de fluides complétés. Plaquettes de frein avant à 70%." },
+    { id: 3, date: "18 SEPT 2023", km: "12 500 km", category: "Contrôle", title: "Contrôle & diagnostic", details: ["Vérification électronique", "Mise à jour système"], isRecent: false, techNote: "Mise à jour du système d'infodivertissement (V2.1) effectuée avec succès. Aucun défaut signalé." },
   ];
 
   const filters = ['Tout', 'Entretien', 'Révision', 'Contrôle'];
@@ -969,17 +1064,17 @@ const HistoryTab = ({ onOpenReport, currentRepairStep, onOpenQuote }) => {
                       <div className="text-[12px] font-medium text-[var(--text-muted)]">Casa - Ain Sebaâ</div>
                     </div>
                  </div>
-                 <div className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest animate-pulse shadow-inner border border-white ${currentRepairStep === 5 ? 'bg-yellow-100 text-[var(--warning)]' : 'bg-blue-100 text-[var(--primary)]'}`}>
+                 <div className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest animate-pulse shadow-inner border border-white ${currentRepairStep === 5 ? 'bg-yellow-100 text-[var(--warning)]' : currentRepairStep === 6 ? 'bg-blue-100 text-[var(--primary)]' : 'bg-blue-100 text-[var(--primary)]'}`}>
                    {currentRepairStep === 5 ? 'Devis en attente' : currentRepairStep === 6 ? 'Devis validé' : 'En atelier'}
                  </div>
               </div>
               {/* Nouvelles informations métier */}
               <div className="flex items-center justify-between mt-2 pt-4 border-t border-blue-200/50">
                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--primary)] bg-white/50 px-2 py-1 rounded-md">
-                   <Hash size={14} /> OR-2026-00482
+                   <FileText size={14} /> OR-2026-00482
                  </div>
                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--text-muted)]">
-                   <Clock size={14} /> MAJ : Aujourd'hui à 11h35
+                   <Calendar size={14} /> MAJ : Aujourd'hui à 11h35
                  </div>
               </div>
            </div>
@@ -1097,9 +1192,9 @@ const HistoryTab = ({ onOpenReport, currentRepairStep, onOpenQuote }) => {
             <div className="text-[32px] font-black text-[var(--primary)] leading-none relative z-10">06</div>
           </PremiumCard>
           <PremiumCard className="!p-5 flex flex-col justify-center relative overflow-hidden group shadow-sm">
-            <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:scale-110 transition-transform duration-500"><FileText size={80}/></div>
-            <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1.5 flex items-center gap-1.5 relative z-10"><FileText size={12}/> Coût Total</div>
-            <div className="text-[28px] font-black text-[var(--primary)] tracking-tight leading-none relative z-10">5 480<span className="text-[12px] ml-1 text-[var(--text-muted)] font-bold">DH</span></div>
+            <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:scale-110 transition-transform duration-500"><Shield size={80}/></div>
+            <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1.5 flex items-center gap-1.5 relative z-10"><Shield size={12}/> Statut SAV</div>
+            <div className="text-[18px] font-black text-[var(--success)] tracking-tight leading-none relative z-10 mt-2">À jour</div>
           </PremiumCard>
         </div>
         <PremiumCard className="!p-5 flex justify-between items-center bg-gradient-to-r from-white to-[var(--ice)]/50 shadow-sm">
@@ -1125,7 +1220,6 @@ const HistoryTab = ({ onOpenReport, currentRepairStep, onOpenQuote }) => {
             date={item.date} 
             km={item.km} 
             type={item.title} 
-            price={item.price}
             details={item.details}
             isRecent={item.isRecent}
             onClick={() => onOpenReport(item)}
@@ -1138,7 +1232,7 @@ const HistoryTab = ({ onOpenReport, currentRepairStep, onOpenQuote }) => {
   );
 };
 
-const TimelineItem = ({ date, km, type, price, details, isRecent, onClick }) => (
+const TimelineItem = ({ date, km, type, details, isRecent, onClick }) => (
   <div className="relative pl-10 group mb-10 last:mb-0">
     {/* Timeline Dot */}
     <div className={`absolute left-0 top-1 w-6 h-6 rounded-full flex items-center justify-center bg-white shadow-sm border-2 ${isRecent ? 'border-[var(--primary)]' : 'border-[var(--ice)]'} z-10 transition-colors`}>
@@ -1147,9 +1241,6 @@ const TimelineItem = ({ date, km, type, price, details, isRecent, onClick }) => 
     
     <div className="flex justify-between items-center mb-3">
       <span className={`text-[10px] font-black uppercase tracking-widest px-3.5 py-1.5 rounded-[10px] shadow-sm ${isRecent ? 'gradient-blue text-white' : 'bg-white border border-[var(--ice)] text-[var(--text-muted)]'}`}>{date}</span>
-      <div className="bg-[var(--ice)] px-3.5 py-1.5 rounded-[12px] shadow-inner border border-white">
-        <span className="text-[13px] font-black text-[var(--primary)]">{price}</span>
-      </div>
     </div>
     
     <h4 className="text-[18px] font-black text-[var(--text)] tracking-tight mb-2.5">{type}</h4>
@@ -1271,15 +1362,7 @@ const ExploreHorizontalCard = ({ title, desc, icon: Icon, onClick }) => {
   );
 };
 
-const ProfileTab = ({ onNavigate, onOpen, vehicles, setVehicles, activeVehicleId, setActiveVehicleId }) => {
-  const [editingKmId, setEditingKmId] = useState(null);
-  const [tempKm, setTempKm] = useState("");
-
-  const handleSaveKm = (id) => {
-    setVehicles(vehicles.map(v => v.id === id ? { ...v, km: parseInt(tempKm) || v.km } : v));
-    setEditingKmId(null);
-  };
-
+const ProfileTab = ({ onNavigate, onOpen, vehicles, setVehicles, activeVehicleId, setActiveVehicleId, onOpenVehicleDetails }) => {
   return (
     <div className="flex flex-col animate-fade-in px-6 pt-16 pb-8">
       <h1 className="text-[32px] font-black text-[var(--text)] tracking-tight mb-8">Profil</h1>
@@ -1319,7 +1402,7 @@ const ProfileTab = ({ onNavigate, onOpen, vehicles, setVehicles, activeVehicleId
          <div className="text-[11px] font-bold text-[var(--cyan)] uppercase tracking-widest relative z-10 drop-shadow-sm">720 pts avant le statut Gold</div>
       </div>
 
-      {/* Saved Vehicles */}
+      {/* Saved Vehicles - IMPROVED */}
       <div className="mb-10">
          <div className="flex justify-between items-end mb-4 px-1">
            <h3 className="text-[18px] font-black text-[var(--text)] tracking-tight">Mes véhicules</h3>
@@ -1328,51 +1411,39 @@ const ProfileTab = ({ onNavigate, onOpen, vehicles, setVehicles, activeVehicleId
          
          <div className="flex flex-col gap-4">
            {vehicles.map((v) => (
-             <PremiumCard key={v.id} onClick={() => setActiveVehicleId(v.id)} className={`flex justify-between items-center !p-5 shadow-sm group cursor-pointer hover:shadow-md transition-shadow ${activeVehicleId === v.id ? 'border-2 !border-[var(--primary)]' : ''}`}>
-               <div className="z-10 flex-1">
-                 <div className="flex items-center gap-2 mb-1">
-                   <div className="text-[18px] font-black text-[var(--text)] tracking-tight">{v.name}</div>
-                   {activeVehicleId === v.id && <span className="text-[9px] bg-[var(--primary)] text-white px-2 py-0.5 rounded-full uppercase tracking-widest font-bold">Actif</span>}
-                 </div>
-                 <div className="text-[11px] font-bold text-[var(--text-muted)] mt-1 tracking-widest uppercase">VIN: {v.vin}</div>
-                 
-                 {editingKmId === v.id ? (
-                   <div className="flex items-center gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
-                     <input 
-                       type="number" 
-                       value={tempKm} 
-                       onChange={(e) => setTempKm(e.target.value)} 
-                       className="bg-[var(--ice)] text-[var(--primary)] text-[12px] font-black px-3 py-1.5 rounded-lg border border-blue-100 w-24 outline-none focus:ring-2 focus:ring-[var(--cyan)]/30"
-                       autoFocus
-                     />
-                     <button onClick={() => handleSaveKm(v.id)} className="w-7 h-7 rounded-md bg-[var(--success)] text-white flex items-center justify-center shadow-sm hover:brightness-110">
-                       <Check size={14} strokeWidth={3}/>
-                     </button>
-                     <button onClick={() => setEditingKmId(null)} className="w-7 h-7 rounded-md bg-white border border-gray-200 text-gray-500 flex items-center justify-center shadow-sm hover:bg-gray-50">
-                       <X size={14} strokeWidth={2}/>
-                     </button>
-                   </div>
-                 ) : (
-                   <div className="flex items-center gap-2 mt-3">
-                     <div className="text-[12px] font-black text-[var(--primary)] bg-[var(--ice)] inline-block px-3 py-1.5 rounded-lg border border-blue-100">
-                       {v.km.toLocaleString()} km
-                     </div>
-                     <button 
-                       onClick={(e) => { 
-                         e.stopPropagation(); 
-                         setEditingKmId(v.id); 
-                         setTempKm(v.km.toString()); 
-                       }} 
-                       className="p-1.5 text-[var(--text-muted)] hover:text-[var(--primary)] hover:bg-[var(--ice)] rounded-md transition-colors"
-                     >
-                       <Edit2 size={14} strokeWidth={2.5} />
-                     </button>
-                   </div>
-                 )}
+             <PremiumCard key={v.id} onClick={() => onOpenVehicleDetails(v)} className={`relative flex flex-col !p-0 overflow-hidden shadow-sm group cursor-pointer hover:shadow-md transition-all ${activeVehicleId === v.id ? 'border-2 !border-[var(--primary)]' : 'border border-[var(--ice)]'}`}>
+               {/* Background Glow */}
+               <div className="absolute right-0 top-0 w-32 h-32 bg-[var(--ice)] rounded-full blur-[40px] opacity-40 pointer-events-none group-hover:opacity-60 transition-opacity"></div>
+               
+               <div className="p-5 flex justify-between items-start z-10">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="text-[18px] font-black text-[var(--text)] tracking-tight">{v.name}</div>
+                      {activeVehicleId === v.id && (
+                         <span className="text-[9px] bg-[#F0FDF4] border border-[#bbf7d0] text-[var(--success)] px-2 py-0.5 rounded-full uppercase tracking-widest font-black flex items-center gap-1 shadow-sm">
+                           <CheckCircle2 size={10} strokeWidth={3}/> Principal
+                         </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] font-bold text-[var(--text-muted)] tracking-widest uppercase mb-4">VIN: {v.vin}</div>
+                    
+                    <div className="flex items-center gap-3">
+                       <div className="flex items-center gap-1.5 bg-[var(--bg-color)] px-3 py-1.5 rounded-[12px] border border-blue-100 shadow-inner">
+                          <Activity size={14} className="text-[var(--primary)]" />
+                          <span className="text-[13px] font-black text-[var(--primary)]">{v.km.toLocaleString()} km</span>
+                       </div>
+                    </div>
+                  </div>
+                  
+                  <div className="w-32 h-20 relative flex items-center justify-center bg-white rounded-[16px] shadow-sm border border-[var(--ice)] shrink-0 ml-4 group-hover:scale-105 transition-transform duration-300">
+                    <div className="absolute bottom-1 w-3/4 h-3 bg-black/20 rounded-full blur-md"></div>
+                    <img src={v.img} alt={v.name} className="w-[140%] max-w-none object-contain drop-shadow-md z-10 translate-x-2" />
+                  </div>
                </div>
-               <div className="w-32 h-20 relative flex items-center justify-center bg-[var(--bg-color)] rounded-2xl border border-[var(--ice)] shadow-inner overflow-visible shrink-0 ml-2">
-                 <div className="absolute bottom-2 w-3/4 h-3 bg-black/30 rounded-full blur-md"></div>
-                 <img src={v.img} alt={v.name} className="w-[140%] max-w-none object-contain drop-shadow-md z-10 transition-transform group-hover:scale-105" />
+               
+               <div className="px-5 py-3 bg-[var(--bg-color)] border-t border-[var(--ice)] flex items-center justify-between group-hover:bg-[var(--ice)] transition-colors">
+                  <span className="text-[12px] font-bold text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors">Voir ou gérer ce véhicule</span>
+                  <ArrowRight size={16} className="text-gray-300 group-hover:text-[var(--primary)] transition-colors" />
                </div>
              </PremiumCard>
            ))}
@@ -1383,7 +1454,6 @@ const ProfileTab = ({ onNavigate, onOpen, vehicles, setVehicles, activeVehicleId
       <h3 className="text-[18px] font-black text-[var(--text)] mb-4 tracking-tight px-1">Préférences</h3>
       <div className="bg-white rounded-[32px] border border-[var(--ice)] overflow-hidden mb-8 shadow-sm">
         <ProfileRow icon={User} label="Informations personnelles" onClick={() => onOpen('personal-info')} />
-        <ProfileRow icon={Database} label="Synchronisation SAV" onClick={() => onOpen('autoline-sync')} />
         <ProfileRow icon={Bell} label="Notifications" onClick={() => onOpen('profile-notifications')} />
         <ProfileRow icon={Settings} label="Préférences de l'application" onClick={() => onOpen('app-settings')} />
         <ProfileRow icon={Shield} label="Confidentialité" onClick={() => onOpen('privacy')} />
@@ -1393,6 +1463,124 @@ const ProfileTab = ({ onNavigate, onOpen, vehicles, setVehicles, activeVehicleId
         Se déconnecter
       </Button>
     </div>
+  );
+};
+
+const VehicleDetailsScreen = ({ vehicle, onClose, vehicles, setVehicles, activeVehicleId, setActiveVehicleId }) => {
+  const [isEditingKm, setIsEditingKm] = useState(false);
+  const [tempKm, setTempKm] = useState(vehicle.km.toString());
+  const isActive = activeVehicleId === vehicle.id;
+
+  const handleSave = () => {
+    const newKm = parseInt(tempKm);
+    if(!isNaN(newKm) && newKm >= 0) {
+       setVehicles(vehicles.map(v => v.id === vehicle.id ? { ...v, km: newKm } : v));
+    }
+    setIsEditingKm(false);
+  };
+
+  return (
+    <PremiumScreen className="h-full z-[80] fixed inset-0 flex flex-col">
+      <Header title="Fiche Véhicule" onBack={onClose} rightAction={<button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm border border-[var(--ice)] active:scale-95 text-[var(--text)]"><X size={24} strokeWidth={2.5}/></button>} />
+      
+      <div className="flex-1 overflow-y-auto hide-scrollbar pb-10 animate-slide-in-right px-6 pt-4">
+         {/* Hero Image */}
+         <div className="relative h-48 rounded-[32px] overflow-hidden gradient-blue mb-8 shadow-[0_20px_40px_-10px_rgba(0,40,94,0.3)] flex flex-col items-center justify-end p-6 border border-white/20">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,var(--cyan)_0%,transparent_60%)] opacity-30"></div>
+            <div className="absolute top-4 left-4 bg-white/20 backdrop-blur-md px-3 py-1 rounded-lg border border-white/30 text-[10px] font-black text-white uppercase tracking-widest">
+              Mon Garage
+            </div>
+            {isActive && (
+              <div className="absolute top-4 right-4 bg-[var(--success)] shadow-sm px-3 py-1 rounded-lg text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-1">
+                <CheckCircle2 size={12} strokeWidth={3}/> Principal
+              </div>
+            )}
+            <img src={vehicle.img} className="absolute top-6 w-[120%] max-w-none object-contain drop-shadow-[0_20px_20px_rgba(0,10,30,0.6)]" alt={vehicle.name} />
+         </div>
+
+         <h2 className="text-[28px] font-black text-[var(--text)] tracking-tight mb-2">{vehicle.name}</h2>
+         <div className="flex items-center gap-3 mb-8">
+           <span className="text-[12px] font-bold bg-white border border-[var(--ice)] px-3 py-1.5 rounded-lg text-[var(--text-muted)] flex items-center gap-1.5 shadow-sm uppercase tracking-widest">
+             <span className="text-[var(--primary)]">VIN</span> {vehicle.vin}
+           </span>
+         </div>
+
+         {/* Editable Mileage Card */}
+         <div className="bg-white rounded-[24px] p-6 shadow-sm border border-[var(--ice)] mb-6">
+            <div className="flex justify-between items-center mb-5">
+              <div className="flex items-center gap-4">
+                 <div className="w-12 h-12 bg-[var(--ice)] text-[var(--primary)] rounded-[18px] flex items-center justify-center border border-blue-100 shadow-inner">
+                   <Activity size={24} strokeWidth={2.5}/>
+                 </div>
+                 <div>
+                   <h3 className="text-[16px] font-black text-[var(--text)] tracking-tight">Kilométrage actuel</h3>
+                   <p className="text-[12px] text-[var(--text-muted)] font-medium mt-0.5">Suivi indispensable pour vos garanties</p>
+                 </div>
+              </div>
+            </div>
+            
+            {isEditingKm ? (
+              <div className="flex flex-col gap-3 animate-fade-in pt-4 border-t border-[var(--ice)]">
+                <div className="relative">
+                  <input 
+                    type="number" 
+                    value={tempKm} 
+                    onChange={e => setTempKm(e.target.value)} 
+                    className="w-full bg-[var(--bg-color)] border-2 border-[var(--cyan)] rounded-[16px] py-4 px-5 text-[18px] font-black text-[var(--text)] outline-none focus:ring-4 focus:ring-[var(--cyan)]/20 transition-all"
+                    autoFocus
+                  />
+                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[16px] font-bold text-[var(--text-muted)]">km</span>
+                </div>
+                <div className="flex gap-3 mt-2">
+                  <Button onClick={() => { setIsEditingKm(false); setTempKm(vehicle.km.toString()); }} variant="secondary" className="flex-1 !py-3 border-gray-200 text-gray-500 hover:bg-gray-50">Annuler</Button>
+                  <Button onClick={handleSave} variant="primary" className="flex-1 !py-3 !bg-gradient-to-r !from-[#16A34A] !to-[#15803d] shadow-[0_8px_24px_rgba(22,163,74,0.4)]">Enregistrer</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-between items-center bg-[var(--bg-color)] rounded-[16px] p-4 border border-[var(--ice)] pt-4">
+                <div className="text-[24px] font-black text-[var(--primary)]">{vehicle.km.toLocaleString()} <span className="text-[14px] text-[var(--text-muted)]">km</span></div>
+                <button onClick={() => setIsEditingKm(true)} className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-[12px] shadow-sm border border-[var(--ice)] text-[13px] font-bold text-[var(--accent)] hover:bg-[var(--ice)] hover:border-blue-200 transition-colors active:scale-95">
+                  <Edit2 size={16} strokeWidth={2.5}/> Mettre à jour
+                </button>
+              </div>
+            )}
+         </div>
+
+         {/* Specifications / Info */}
+         <div className="grid grid-cols-2 gap-3 mb-8">
+            <div className="bg-[var(--bg-color)] rounded-[20px] p-4 border border-[var(--ice)] shadow-sm">
+               <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Immatriculation</div>
+               <div className="text-[14px] font-bold text-[var(--text)]">12345 | A | 1</div>
+            </div>
+            <div className="bg-[var(--bg-color)] rounded-[20px] p-4 border border-[var(--ice)] shadow-sm">
+               <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Dernière visite</div>
+               <div className="text-[14px] font-bold text-[var(--text)]">24 Mai 2024</div>
+            </div>
+            <div className="bg-[var(--bg-color)] rounded-[20px] p-4 border border-[var(--ice)] shadow-sm col-span-2 flex items-center justify-between">
+               <div className="flex items-center gap-2">
+                 <WrenchIcon size={16} className="text-[var(--primary)]"/>
+                 <span className="text-[13px] font-black text-[var(--text-muted)] uppercase tracking-widest">Centre habituel</span>
+               </div>
+               <span className="text-[14px] font-bold text-[var(--text)]">Casa - Ain Sebaâ</span>
+            </div>
+         </div>
+
+         {/* Make Active Action */}
+         <div className="mt-auto">
+           <button 
+             onClick={() => { if(!isActive) setActiveVehicleId(vehicle.id); }}
+             disabled={isActive}
+             className={`w-full py-4.5 rounded-[22px] font-black text-[15px] flex items-center justify-center gap-2 transition-all duration-300 shadow-sm border ${
+               isActive 
+                 ? 'bg-[#F0FDF4] border-[#bbf7d0] text-[var(--success)] opacity-80 cursor-not-allowed' 
+                 : 'bg-white border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--ice)] active:scale-[0.98]'
+             }`}
+           >
+             {isActive ? <><CheckCircle2 size={20} strokeWidth={2.5}/> Véhicule principal actuel</> : "Définir comme véhicule principal"}
+           </button>
+         </div>
+      </div>
+    </PremiumScreen>
   );
 };
 
@@ -1439,72 +1627,6 @@ const PersonalInfoScreen = ({ onClose }) => (
     </div>
   </PremiumScreen>
 );
-
-const AutolineSyncScreen = ({ onClose }) => {
-  const SyncRow = ({ icon: Icon, title, status, isLast }) => (
-    <div className={`flex items-center justify-between p-5 ${!isLast ? 'border-b border-[var(--ice)]' : ''} bg-white transition-colors hover:bg-gray-50`}>
-      <div className="flex items-center gap-4">
-         <div className="w-12 h-12 rounded-[18px] bg-[var(--bg-color)] flex items-center justify-center text-[var(--primary)] border border-[var(--ice)] shadow-inner">
-           <Icon size={20} strokeWidth={2.5}/>
-         </div>
-         <span className="text-[15px] font-bold text-[var(--text)]">{title}</span>
-      </div>
-      {status === 'ok' ? (
-        <div className="flex items-center gap-1.5 bg-[#F0FDF4] text-[var(--success)] px-3 py-1.5 rounded-lg border border-[#bbf7d0] shadow-sm">
-          <CheckCircle2 size={14} strokeWidth={3} />
-          <span className="text-[10px] font-black uppercase tracking-widest">À jour</span>
-        </div>
-      ) : (
-        <div className="flex items-center gap-1.5 bg-blue-50 text-[var(--primary)] px-3 py-1.5 rounded-lg border border-blue-100 shadow-sm">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--primary)] opacity-50"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--primary)]"></span>
-          </span>
-          <span className="text-[10px] font-black uppercase tracking-widest">Actif</span>
-        </div>
-      )}
-    </div>
-  );
-
-  return (
-    <PremiumScreen className="h-full z-[80] fixed inset-0 flex flex-col">
-      <Header title="Synchronisation SAV" onBack={onClose} />
-      <div className="px-6 py-6 flex-1 overflow-y-auto hide-scrollbar pb-10 animate-slide-in-right">
-         
-         <div className="flex flex-col items-center justify-center mb-10 mt-2">
-           <div className="relative mb-6">
-             <div className="absolute inset-0 bg-[var(--cyan)] rounded-full blur-[40px] opacity-20 animate-pulse"></div>
-             <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-lg relative z-10 border border-[var(--ice)]">
-               <Database size={40} className="text-[var(--primary)]" strokeWidth={2.5} />
-             </div>
-             <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[var(--success)] rounded-full border-4 border-white flex items-center justify-center z-20 shadow-sm">
-               <Check size={14} className="text-white" strokeWidth={4} />
-             </div>
-           </div>
-           <p className="text-[14px] font-medium text-[var(--text-muted)] text-center leading-relaxed px-4 max-w-[95%]">
-             Vos informations sont synchronisées avec notre système après-vente afin de vous offrir un suivi fiable et actualisé.
-           </p>
-         </div>
-
-         <h3 className="text-[13px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-4 px-2">État de la connexion</h3>
-         
-         <PremiumCard className="!p-0 mb-8 shadow-sm overflow-hidden border border-[var(--ice)]">
-           <SyncRow icon={User} title="Client identifié" status="ok" />
-           <SyncRow icon={Car} title="Véhicule associé" status="ok" />
-           <SyncRow icon={Calendar} title="Rendez-vous synchronisé" status="ok" />
-           <SyncRow icon={Activity} title="Intervention en cours" status="pending" />
-           <SyncRow icon={History} title="Historique disponible" status="ok" isLast />
-         </PremiumCard>
-
-         <div className="text-center pb-8">
-           <span className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest bg-white px-5 py-2.5 rounded-full border border-[var(--ice)] shadow-sm inline-block">
-             Dernière mise à jour : il y a 10 min
-           </span>
-         </div>
-      </div>
-    </PremiumScreen>
-  );
-};
 
 const ProfileNotificationsScreen = ({ onClose }) => {
   const [toggles, setToggles] = useState({ t1: true, t2: true, t3: false, t4: true });
@@ -1680,152 +1802,7 @@ const SelectVehicleScreen = ({ onClose, vehicles, activeVehicleId, onSelect }) =
   </PremiumScreen>
 );
 
-const ReportPreviewModal = ({ report, onClose }) => {
-  if (!report) return null;
-  return (
-    <PremiumScreen className="h-full z-[100] fixed inset-0 bg-transparent">
-      <div className="absolute inset-0 bg-[var(--primary-deep)]/70 backdrop-blur-md transition-opacity" onClick={onClose}></div>
-      <div className="absolute bottom-0 left-0 right-0 bg-[var(--bg-color)] rounded-t-[48px] p-8 shadow-[0_-20px_40px_rgba(0,0,0,0.3)] border-t border-white/50 animate-slide-up flex flex-col max-h-[85vh]">
-        <div className="w-16 h-1.5 bg-gray-300 rounded-full mx-auto mb-8 shrink-0"></div>
-        
-        <div className="overflow-y-auto hide-scrollbar pb-8 flex flex-col">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h3 className="text-[24px] font-black text-[var(--text)] tracking-tight leading-tight mb-2">{report.title}</h3>
-                <p className="text-[13px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{report.date}</p>
-              </div>
-              <div className="bg-[var(--ice)] px-4 py-2 rounded-[16px] shadow-inner border border-white">
-                <span className="text-[16px] font-black text-[var(--primary)]">{report.price}</span>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mb-8">
-              <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-[14px] shadow-sm border border-[var(--ice)] text-[13px] font-bold text-[var(--text-muted)]">
-                <MapPin size={16} className="text-[var(--primary)]" /> {report.km}
-              </div>
-              <div className="flex items-center gap-2 bg-[#F0FDF4] px-4 py-2.5 rounded-[14px] shadow-sm border border-[#bbf7d0] text-[13px] font-bold text-[var(--success)]">
-                <CheckCircle2 size={16} /> Terminé
-              </div>
-            </div>
-
-            <h4 className="text-[15px] font-black text-[var(--text)] tracking-tight mb-4 px-1">Détails des opérations</h4>
-            <div className="bg-white rounded-[28px] p-6 shadow-sm border border-[var(--ice)] mb-8 flex flex-col gap-4">
-              {report.details.map((d, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full bg-[var(--ice)] flex items-center justify-center text-[var(--primary)] shrink-0 border border-white shadow-inner"><Check size={14} strokeWidth={3}/></div>
-                  <span className="text-[15px] font-bold text-[var(--text)]">{d}</span>
-                </div>
-              ))}
-            </div>
-
-            <h4 className="text-[15px] font-black text-[var(--text)] tracking-tight mb-4 px-1">Note de l'expert BYD</h4>
-            <div className="bg-white rounded-[28px] p-6 shadow-sm border border-[var(--ice)] mb-8 flex items-start gap-4">
-              <div className="w-12 h-12 rounded-[20px] bg-[var(--bg-color)] flex items-center justify-center text-[var(--primary)] shrink-0 border border-[var(--ice)]"><User size={20} strokeWidth={2.5} /></div>
-              <p className="text-[14px] font-medium text-[var(--text-muted)] leading-relaxed italic pt-1">"{report.techNote}"</p>
-            </div>
-            
-            <Button variant="primary" fullWidth icon={Download} className="!py-4.5 !text-[16px] shrink-0" onClick={onClose}>Télécharger le rapport PDF</Button>
-        </div>
-      </div>
-    </PremiumScreen>
-  );
-};
-
-const RepairQuoteModal = ({ onClose, onAccept }) => {
-  const [isAccepted, setIsAccepted] = useState(false);
-
-  const handleAccept = () => {
-    setIsAccepted(true);
-    setTimeout(() => {
-      onAccept();
-      onClose();
-    }, 1500);
-  };
-
-  if (isAccepted) {
-    return (
-      <PremiumScreen className="h-full z-[100] fixed inset-0 bg-transparent">
-        <div className="absolute inset-0 bg-[var(--primary-deep)]/70 backdrop-blur-md"></div>
-        <div className="absolute bottom-0 left-0 right-0 bg-[var(--bg-color)] rounded-t-[48px] p-8 shadow-2xl flex flex-col items-center justify-center min-h-[50vh] animate-slide-up">
-          <div className="w-24 h-24 rounded-full bg-[var(--success)] flex items-center justify-center text-white mb-6 animate-pulse ring-8 ring-green-100">
-            <CheckCircle2 size={48} strokeWidth={2.5} />
-          </div>
-          <h3 className="text-[24px] font-black text-[var(--text)] mb-2 tracking-tight">Devis validé !</h3>
-          <p className="text-[15px] font-medium text-[var(--text-muted)] text-center max-w-[85%]">Merci pour votre confirmation. Les travaux reprennent immédiatement.</p>
-        </div>
-      </PremiumScreen>
-    );
-  }
-
-  return (
-    <PremiumScreen className="h-full z-[100] fixed inset-0 bg-transparent">
-      <div className="absolute inset-0 bg-[var(--primary-deep)]/70 backdrop-blur-md transition-opacity" onClick={onClose}></div>
-      <div className="absolute bottom-0 left-0 right-0 bg-[var(--bg-color)] rounded-t-[48px] p-8 shadow-[0_-20px_40px_rgba(0,0,0,0.3)] border-t border-white/50 animate-slide-up flex flex-col max-h-[90vh]">
-        <div className="w-16 h-1.5 bg-gray-300 rounded-full mx-auto mb-6 shrink-0"></div>
-        
-        <div className="overflow-y-auto hide-scrollbar pb-8 flex flex-col">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="bg-yellow-100 text-[var(--warning)] px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5"><AlertTriangle size={12} strokeWidth={3}/> Action requise</span>
-              </div>
-              <h3 className="text-[24px] font-black text-[var(--text)] tracking-tight leading-tight mb-1">Devis complémentaire</h3>
-              <p className="text-[13px] font-medium text-[var(--text-muted)] leading-relaxed max-w-[90%]">Validation requise pour poursuivre l’intervention</p>
-            </div>
-            <div className="bg-[var(--ice)] px-4 py-2 rounded-[16px] shadow-inner border border-white shrink-0">
-              <span className="text-[16px] font-black text-[var(--primary)]">1 450 DH</span>
-            </div>
-          </div>
-
-          <PremiumCard className="!p-5 my-6 flex flex-col gap-4 border-l-4 !border-l-[var(--warning)] shadow-sm">
-             <div>
-               <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1.5">Description de l'intervention</div>
-               <div className="text-[14px] font-bold text-[var(--text)] leading-snug">Remplacement des plaquettes de frein avant suite à une usure prononcée ( {'>'} 85% ) détectée lors du diagnostic.</div>
-             </div>
-             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[var(--ice)]">
-                <div>
-                   <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><Package size={14} className="text-[var(--primary)]"/> Pièces</div>
-                   <div className="text-[14px] font-black text-[var(--text)]">850 DH</div>
-                   <div className="text-[11px] font-medium text-[var(--text-muted)] mt-0.5">Jeu de plaquettes AV</div>
-                </div>
-                <div>
-                   <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><WrenchIcon size={14} className="text-[var(--primary)]"/> Main-d'œuvre</div>
-                   <div className="text-[14px] font-black text-[var(--text)]">600 DH</div>
-                   <div className="text-[11px] font-medium text-[var(--text-muted)] mt-0.5">1h30 estimée</div>
-                </div>
-             </div>
-          </PremiumCard>
-
-          <div className="flex items-center justify-between bg-white rounded-[20px] p-4 shadow-sm border border-[var(--ice)] mb-4 cursor-pointer hover:bg-gray-50 transition-colors">
-             <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-[16px] bg-[var(--bg-color)] flex items-center justify-center text-[var(--primary)] border border-[var(--ice)] shadow-inner"><FileText size={20} strokeWidth={2.5}/></div>
-                <div>
-                   <div className="text-[14px] font-black text-[var(--text)] tracking-tight">Devis_OR-2026-00482.pdf</div>
-                   <div className="text-[12px] font-medium text-[var(--text-muted)]">Document officiel (1.2 Mo)</div>
-                </div>
-             </div>
-             <button className="text-[var(--primary)] w-10 h-10 flex items-center justify-center bg-[var(--ice)] rounded-full transition-transform active:scale-95 shadow-sm"><Download size={18} strokeWidth={2.5}/></button>
-          </div>
-
-          <div className="flex items-center justify-between bg-[#F0FDF4] rounded-[20px] p-5 border border-[#bbf7d0] mb-8 shadow-sm">
-            <span className="text-[14px] font-black text-[var(--text)] tracking-tight">Délai estimé supplémentaire</span>
-            <span className="text-[14px] font-black text-[var(--success)]">+ 45 minutes</span>
-          </div>
-
-          <div className="flex flex-col gap-3 mt-auto">
-            <Button variant="primary" onClick={handleAccept} fullWidth className="!py-4.5 !text-[16px] shadow-[0_8px_24px_rgba(22,163,74,0.4)] !bg-gradient-to-r !from-[#16A34A] !to-[#15803d] border-t border-white/20">
-              <CheckCircle2 size={22}/> Accepter le devis
-            </Button>
-            <div className="flex gap-3">
-               <Button variant="secondary" onClick={onClose} className="flex-1 !py-4 !text-[14px] border-[var(--ice)] !text-[var(--danger)] bg-red-50/50 hover:bg-red-50"><X size={18}/> Refuser</Button>
-               <Button variant="secondary" className="flex-1 !py-4 !text-[14px] border-[var(--ice)] text-[var(--primary)]"><Phone size={18}/> Être rappelé</Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </PremiumScreen>
-  );
-};
+// --- GLOBAL OVERLAYS ---
 
 const BookingFlow = ({ onClose }) => {
   const [step, setStep] = useState(1);
@@ -1833,7 +1810,7 @@ const BookingFlow = ({ onClose }) => {
   const renderStep = () => {
     switch(step) {
       case 1: return (
-        <div className="animate-slide-in-right h-full flex flex-col">
+        <div className="animate-slide-in-right flex-1 overflow-y-auto hide-scrollbar pb-36">
           <p className="text-[16px] font-medium text-[var(--text-muted)] mb-8 leading-relaxed px-1">Sélectionnez le type d'intervention nécessaire pour votre véhicule.</p>
           <div className="grid grid-cols-2 gap-4 flex-1">
             {[
@@ -1860,7 +1837,7 @@ const BookingFlow = ({ onClose }) => {
         </div>
       );
       case 2: return (
-        <div className="animate-slide-in-right h-full flex flex-col">
+        <div className="animate-slide-in-right flex-1 overflow-y-auto hide-scrollbar pb-36 flex flex-col">
            <p className="text-[16px] font-medium text-[var(--text-muted)] mb-8 leading-relaxed px-1">Pour quel véhicule souhaitez-vous prendre ce rendez-vous ?</p>
            
            <div className="flex flex-col gap-5">
@@ -1898,14 +1875,14 @@ const BookingFlow = ({ onClose }) => {
         </div>
       );
       case 3: return (
-        <div className="animate-slide-in-right flex flex-col h-full">
+        <div className="animate-slide-in-right flex flex-col flex-1 overflow-y-auto hide-scrollbar pb-36">
            <p className="text-[16px] font-medium text-[var(--text-muted)] mb-6 px-1">Trouvez le centre SAV BYD certifié le plus proche.</p>
            <div className="relative mb-6">
              <Search size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
              <input type="text" placeholder="Rechercher une ville..." className="w-full bg-white border border-[var(--ice)] shadow-sm rounded-[24px] pl-14 pr-5 py-4 text-[15px] font-bold focus:outline-none focus:border-[var(--cyan)] focus:ring-4 focus:ring-[var(--cyan)]/10" defaultValue="Casablanca" />
            </div>
            
-           <div className="w-full h-44 bg-[var(--ice)] rounded-[32px] mb-6 relative overflow-hidden border-4 border-white shadow-sm">
+           <div className="w-full h-44 bg-[var(--ice)] rounded-[32px] mb-6 relative overflow-hidden border-4 border-white shadow-sm shrink-0">
              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cartographer.png')] opacity-30 mix-blend-multiply"></div>
              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
                 <div className="w-14 h-14 gradient-blue rounded-full flex items-center justify-center text-white shadow-xl border-4 border-white z-10 animate-bounce"><WrenchIcon size={24} strokeWidth={2.5}/></div>
@@ -1914,12 +1891,12 @@ const BookingFlow = ({ onClose }) => {
              <div className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center text-[var(--primary)]"><MapPin size={18}/></div>
            </div>
 
-           <div className="flex-1 overflow-y-auto hide-scrollbar flex flex-col gap-4 pb-8">
+           <div className="flex flex-col gap-4">
               {[
                 { n: "BYD Casa - Ain Sebaâ", d: "2.1 km", r: "4.8", a: "Aujourd'hui" },
                 { n: "BYD Casa - Sidi Maârouf", d: "6.5 km", r: "4.5", a: "Demain" }
               ].map((c, i) => (
-                <PremiumCard key={i} className="flex flex-col gap-4 !p-5">
+                <PremiumCard key={i} className="flex flex-col gap-4 !p-5 shrink-0">
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="text-[18px] font-black text-[var(--text)] tracking-tight">{c.n}</div>
@@ -1938,7 +1915,7 @@ const BookingFlow = ({ onClose }) => {
         </div>
       );
       case 4: return (
-        <div className="animate-slide-in-right h-full flex flex-col">
+        <div className="animate-slide-in-right flex-1 overflow-y-auto hide-scrollbar pb-36">
            <p className="text-[16px] font-medium text-[var(--text-muted)] mb-6 px-1">Choisissez la date et l'heure de votre rendez-vous.</p>
            
            <div className="bg-white rounded-[32px] border border-[var(--ice)] shadow-sm p-6 mb-8">
@@ -2011,7 +1988,7 @@ const BookingFlow = ({ onClose }) => {
         </div>
       );
       case 5: return (
-        <div className="animate-slide-in-right h-full flex flex-col">
+        <div className="animate-slide-in-right flex-1 overflow-y-auto hide-scrollbar pb-36 flex flex-col">
            <p className="text-[16px] font-medium text-[var(--text-muted)] mb-8 px-1">Personnalisez votre visite avec des options complémentaires exclusives.</p>
            <div className="flex flex-col gap-4 flex-1">
              {[
@@ -2040,10 +2017,10 @@ const BookingFlow = ({ onClose }) => {
         </div>
       );
       case 6: return (
-        <div className="animate-slide-in-right flex flex-col h-full">
+        <div className="animate-slide-in-right flex flex-col flex-1 overflow-y-auto hide-scrollbar pb-36">
            <p className="text-[16px] font-medium text-[var(--text-muted)] mb-6 px-1">Vérifiez les détails avant de confirmer votre rendez-vous.</p>
            
-           <PremiumCard className="flex-1 mb-8 !p-0 overflow-hidden flex flex-col shadow-lg border-[var(--ice)]">
+           <PremiumCard className="flex-1 mb-8 !p-0 overflow-hidden flex flex-col shadow-lg border-[var(--ice)] shrink-0">
              <div className="p-6 bg-gradient-to-b from-[var(--ice)] to-white border-b border-[var(--ice)] relative">
                <div className="absolute right-4 top-4 opacity-10 text-[var(--primary)]"><FileText size={80}/></div>
                <div className="text-[11px] font-black text-[var(--primary)] uppercase tracking-widest mb-2 relative z-10">Facture proforma</div>
@@ -2066,14 +2043,14 @@ const BookingFlow = ({ onClose }) => {
              </div>
            </PremiumCard>
            
-           <div className="mt-auto text-center">
+           <div className="mt-auto text-center shrink-0">
              <p className="text-[12px] text-[var(--text-muted)] mb-5 px-6 font-medium leading-relaxed">Ce coût est une estimation. Le prix final sera confirmé en atelier. Paiement sur place.</p>
              <Button onClick={() => setStep(7)} fullWidth className="!py-4.5 !text-[16px]">Confirmer définitivement</Button>
            </div>
         </div>
       );
       case 7: return (
-        <div className="animate-slide-up flex flex-col items-center justify-center text-center h-full">
+        <div className="animate-slide-up flex flex-col items-center justify-center text-center flex-1 pb-36">
            <div className="relative mb-8">
              <div className="absolute inset-0 bg-[var(--success)] rounded-full blur-[40px] opacity-40 animate-pulse"></div>
              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#16A34A] to-[#15803d] flex items-center justify-center shadow-[0_20px_40px_-10px_rgba(22,163,74,0.5)] relative z-10 border-4 border-white">
@@ -2113,7 +2090,7 @@ const BookingFlow = ({ onClose }) => {
   };
 
   return (
-    <PremiumScreen className="bg-[var(--bg-color)] h-full z-50 fixed inset-0">
+    <PremiumScreen className="bg-[var(--bg-color)] h-full z-50 fixed inset-0 flex flex-col">
       <Header 
         title={step === 7 ? "" : step === 3 ? "Choisir un centre" : step === 4 ? "Date & Créneau" : "Prendre rendez-vous"} 
         onBack={step > 1 && step < 7 ? () => setStep(step - 1) : onClose} 
@@ -2121,7 +2098,7 @@ const BookingFlow = ({ onClose }) => {
         transparent={step===7}
       />
       {step < 7 && (
-        <div className="px-8 pt-2 pb-6">
+        <div className="px-8 pt-2 pb-6 shrink-0">
           <div className="flex gap-2 h-1.5">
             {Array.from({length: 6}).map((_, i) => (
               <div key={i} className={`flex-1 rounded-full transition-colors ${i < step ? 'gradient-blue shadow-[0_0_8px_rgba(0,40,94,0.4)]' : 'bg-gray-200'}`}></div>
@@ -2129,7 +2106,7 @@ const BookingFlow = ({ onClose }) => {
           </div>
         </div>
       )}
-      <div className="px-8 flex-1 pb-10 flex flex-col h-full overflow-y-auto hide-scrollbar relative">
+      <div className="px-8 flex-1 flex flex-col relative overflow-hidden">
         {renderStep()}
       </div>
     </PremiumScreen>
@@ -2137,43 +2114,45 @@ const BookingFlow = ({ onClose }) => {
 };
 
 const SimulatorScreen = ({ onClose, onBook }) => {
+  const [step, setStep] = useState('simulator');
   const [km, setKm] = useState(30000);
-  const [usage, setUsage] = useState('mixte');
+  const [duration, setDuration] = useState(2);
+  const [annualKm, setAnnualKm] = useState(15000);
   const [selectedCar, setSelectedCar] = useState('HAN');
   const [selectedPackage, setSelectedPackage] = useState('essentiel');
 
   const packages = {
     essentiel: {
       title: "Forfait Essentiel",
-      price: 1250,
-      duration: "1h30",
-      desc: "L'entretien complet préconisé par BYD pour garantir la longévité de votre véhicule.",
+      basePrice: 1800,
+      tag: "Entretien annuel",
+      desc: "Couverture complète des entretiens périodiques préconisés par BYD, pour garantir la longévité de votre véhicule.",
       features: [
-        { t: "Contrôle général (40 points)", i: CheckCircle2 },
+        { t: "Révisions annuelles incluses", i: Calendar },
         { t: "Diagnostic Batterie Blade certifié", i: Battery },
         { t: "Remplacement filtres habitacle/air", i: Wind }
       ]
     },
     confort: {
       title: "Forfait Confort",
-      price: 1850,
-      duration: "2h00",
-      desc: "Entretien approfondi incluant le remplacement des fluides essentiels pour votre confort.",
+      basePrice: 3200,
+      tag: "Pièces d'usure",
+      desc: "La tranquillité d'esprit avec le remplacement des pièces d'usure courantes en plus de l'entretien annuel.",
       features: [
         { t: "Forfait Essentiel inclus", i: CheckCircle2 },
-        { t: "Remplacement liquide de frein", i: Disc },
+        { t: "Remplacement plaquettes de frein", i: Disc },
         { t: "Remplacement balais d'essuie-glace", i: Wind }
       ]
     },
     premium: {
       title: "Forfait Premium",
-      price: 2850,
-      duration: "3h00",
-      desc: "La révision absolue pour une tranquillité d'esprit totale et une sécurité optimale.",
+      basePrice: 4900,
+      tag: "Sérénité totale",
+      desc: "Notre couverture maximale incluant l'assistance VIP prioritaire et un véhicule de courtoisie systématique.",
       features: [
         { t: "Forfait Confort inclus", i: CheckCircle2 },
-        { t: "Remplacement plaquettes de frein", i: Disc },
-        { t: "Nettoyage intégral premium", i: Car }
+        { t: "Véhicule de remplacement garanti", i: Car },
+        { t: "Nettoyage intégral premium", i: Star }
       ]
     }
   };
@@ -2185,121 +2164,371 @@ const SimulatorScreen = ({ onClose, onBook }) => {
   };
 
   const currentPkg = packages[selectedPackage];
+  const estimatedPrice = Math.round(currentPkg.basePrice * duration * (annualKm / 15000));
+
+  const SummaryRow = ({ icon: IconComponent, label, value }) => (
+    <div className="flex gap-5 items-center mb-5 last:mb-0">
+      <div className="w-12 h-12 rounded-[16px] bg-[var(--bg-color)] border border-[var(--ice)] shadow-inner flex items-center justify-center shrink-0">
+        <IconComponent size={20} className="text-[var(--primary)]" strokeWidth={2.5} />
+      </div>
+      <div>
+        <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">{label}</div>
+        <div className="text-[15px] font-black text-[var(--text)] tracking-tight leading-none">{value}</div>
+      </div>
+    </div>
+  );
+
+  let headerTitle = "Simulateur Forfaits SAV";
+  if (step === 'summary') headerTitle = "Récapitulatif Forfait";
+  if (step === 'center') headerTitle = "Choisir un centre";
+  if (step === 'slot') headerTitle = "Date & Créneau";
+  if (step === 'confirmation') headerTitle = "";
+
+  const handleBack = () => {
+    if (step === 'summary') setStep('simulator');
+    else if (step === 'center') setStep('summary');
+    else if (step === 'slot') setStep('center');
+    else onClose();
+  };
+
+  const stepNumber = step === 'summary' ? 1 : step === 'center' ? 2 : step === 'slot' ? 3 : step === 'confirmation' ? 4 : 0;
+
+  const renderStep = () => {
+    switch(step) {
+      case 'simulator': return (
+        <>
+          <div className="px-6 pt-6 flex-1 overflow-y-auto hide-scrollbar pb-36 animate-slide-in-right">
+             <div className="relative h-56 rounded-[36px] overflow-hidden gradient-blue mb-8 shadow-[0_20px_40px_-10px_rgba(0,40,94,0.3)] flex flex-col items-center justify-end p-6 border border-white/20">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,var(--cyan)_0%,transparent_60%)] opacity-30"></div>
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-20 mix-blend-overlay"></div>
+                
+                <div className="absolute top-4 w-full flex justify-center gap-2 px-6 z-20">
+                  {['ATTO 3', 'HAN', 'SEAL'].map(car => (
+                    <button key={car} onClick={() => setSelectedCar(car)} className={`text-[11px] font-black px-4 py-1.5 rounded-full transition-all ${selectedCar === car ? 'bg-white text-[var(--primary)] shadow-sm scale-105' : 'bg-white/20 backdrop-blur-md text-white border border-white/30 hover:bg-white/30'}`}>
+                      {car}
+                    </button>
+                  ))}
+                </div>
+
+                <img src={carImages[selectedCar]} className="absolute top-8 w-[140%] max-w-none object-contain drop-shadow-[0_30px_30px_rgba(0,10,30,0.8)] transition-opacity duration-300" alt={selectedCar} />
+             </div>
+
+             <PremiumCard className="mb-6 shadow-md">
+               <div className="flex justify-between items-end mb-8">
+                 <span className="text-[16px] font-black text-[var(--text)] tracking-tight">Kilométrage actuel</span>
+                 <span className="text-[32px] font-black text-[var(--primary)] leading-none">{km.toLocaleString()} <span className="text-[16px] font-bold">km</span></span>
+               </div>
+               <div className="relative py-2">
+                 <input 
+                   type="range" min="0" max="150000" step="5000" value={km} 
+                   onChange={(e) => setKm(parseInt(e.target.value))}
+                   className="w-full h-4 bg-[var(--ice)] rounded-full appearance-none cursor-pointer accent-[var(--primary)] shadow-inner relative z-10"
+                 />
+               </div>
+               <div className="flex justify-between mt-4 text-[12px] font-black text-[var(--text-muted)] px-1">
+                 <span>0 km</span><span>150 000 km</span>
+               </div>
+             </PremiumCard>
+
+             <h3 className="text-[18px] font-black text-[var(--text)] mb-4 tracking-tight px-1">Paramètres du contrat</h3>
+             <div className="flex flex-col gap-4 mb-8">
+                <div>
+                  <div className="flex justify-between items-center px-1 mb-2">
+                    <span className="text-[13px] font-black text-[var(--text-muted)] uppercase tracking-widest">Durée</span>
+                  </div>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4].map(d => (
+                      <button key={d} onClick={() => setDuration(d)} className={`flex-1 py-3 rounded-[20px] text-[13px] font-black transition-all shadow-sm ${duration === d ? 'gradient-blue text-white' : 'bg-white border border-[var(--ice)] text-[var(--text-muted)] hover:bg-[var(--ice)]'}`}>
+                        {d} an{d > 1 ? 's' : ''}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between items-center px-1 mb-2">
+                    <span className="text-[13px] font-black text-[var(--text-muted)] uppercase tracking-widest">Kilométrage estimé</span>
+                  </div>
+                  <div className="flex gap-2">
+                    {[10000, 15000, 20000, 30000].map(k => (
+                      <button key={k} onClick={() => setAnnualKm(k)} className={`flex-1 py-3 rounded-[20px] text-[12px] font-black transition-all shadow-sm ${annualKm === k ? 'bg-[var(--primary)] text-white' : 'bg-white border border-[var(--ice)] text-[var(--text-muted)] hover:bg-[var(--ice)]'}`}>
+                        {k/1000}k <span className="text-[10px] font-bold">/an</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+             </div>
+
+             <div className="flex justify-between items-end mb-4 px-2">
+                <h3 className="text-[20px] font-black text-[var(--text)] tracking-tight">Forfaits applicables</h3>
+             </div>
+
+             <div className="flex gap-2 mb-6 bg-white p-1.5 rounded-[24px] border border-[var(--ice)] shadow-sm">
+               {Object.keys(packages).map((pkgKey) => (
+                 <button 
+                   key={pkgKey} 
+                   onClick={() => setSelectedPackage(pkgKey)}
+                   className={`flex-1 py-3 rounded-[18px] text-[13px] font-black capitalize transition-all ${selectedPackage === pkgKey ? 'bg-[var(--primary)] text-white shadow-md' : 'text-[var(--text-muted)] hover:bg-[var(--ice)]'}`}
+                 >
+                   {pkgKey}
+                 </button>
+               ))}
+             </div>
+             
+             <div className="gradient-blue rounded-[36px] p-8 text-white shadow-[0_24px_48px_-12px_rgba(0,40,94,0.4)] relative overflow-hidden border border-white/20 transition-all duration-300">
+                <div className="absolute -right-10 -top-10 w-48 h-48 bg-[var(--cyan)] rounded-full blur-[60px] opacity-40 mix-blend-screen pointer-events-none"></div>
+                
+                {selectedPackage === 'essentiel' && (
+                  <div className="absolute top-6 right-6 bg-[var(--warning)] text-white text-[11px] font-black px-3.5 py-1.5 rounded-[12px] uppercase tracking-wider shadow-sm border border-yellow-300/50">
+                    Populaire
+                  </div>
+                )}
+                
+                <h4 className="text-[28px] font-black mb-2 tracking-tight">{currentPkg.title}</h4>
+                <p className="text-[14px] font-medium text-white/80 mb-8 leading-relaxed max-w-[85%]">
+                  {currentPkg.desc}
+                </p>
+                
+                <div className="flex flex-col gap-4 mb-8">
+                  {currentPkg.features.map((f, i) => {
+                    const IconComponent = f.i;
+                    return (
+                      <div key={i} className="flex items-center gap-4 bg-white/10 backdrop-blur-md p-3.5 rounded-[20px] border border-white/10">
+                        <IconComponent size={20} className="text-[var(--cyan)] shrink-0" strokeWidth={2.5}/> 
+                        <span className="text-[14px] font-bold">{f.t}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="glass-panel-dark rounded-[28px] p-6 flex items-end justify-between border-white/20 shadow-inner">
+                  <div>
+                    <div className="text-[11px] text-white/70 font-black uppercase tracking-widest mb-1">Estimation du contrat</div>
+                    <div className="text-[36px] font-black leading-none tracking-tight">{estimatedPrice.toLocaleString()}<span className="text-[16px] font-bold text-white/80 ml-1">DH</span></div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[11px] text-white/70 font-black uppercase tracking-widest mb-2">Couverture</div>
+                    <div className="text-[16px] font-black bg-white/20 px-3 py-1.5 rounded-lg border border-white/30">{duration} an{duration>1?'s':''}</div>
+                  </div>
+                </div>
+             </div>
+          </div>
+
+          <div className="absolute bottom-0 left-0 right-0 p-6 glass-panel border-t border-[var(--ice)] rounded-t-[40px] z-20">
+             <Button onClick={() => setStep('summary')} fullWidth className="!py-4.5 !text-[16px]">Planifier ce forfait</Button>
+          </div>
+        </>
+      );
+      
+      case 'summary': return (
+        <>
+          <div className="px-8 pt-4 flex-1 overflow-y-auto hide-scrollbar pb-36 animate-slide-in-right">
+            <p className="text-[16px] font-medium text-[var(--text-muted)] mb-6 px-1 mt-2">Vérifiez les détails de votre forfait avant de poursuivre.</p>
+            <PremiumCard className="mb-8 !p-0 overflow-hidden flex flex-col shadow-lg border-[var(--ice)] shrink-0">
+              <div className="p-6 bg-gradient-to-b from-[var(--ice)] to-white border-b border-[var(--ice)] relative">
+                <div className="text-[11px] font-black text-[var(--primary)] uppercase tracking-widest mb-2 relative z-10">Forfait choisi</div>
+                <div className="text-[24px] font-black text-[var(--text)] tracking-tight relative z-10">{currentPkg.title}</div>
+              </div>
+              <div className="p-6 flex flex-col flex-1">
+                <SummaryRow icon={Car} label="Véhicule concerné" value={`BYD ${selectedCar}`} />
+                <SummaryRow icon={MapPin} label="Kilométrage actuel" value={`${km.toLocaleString()} km`} />
+                <SummaryRow icon={Calendar} label="Durée estimée" value={`${duration} an${duration > 1 ? 's' : ''}`} />
+                <SummaryRow icon={WrenchIcon} label="Centre SAV recommandé" value="BYD Casablanca - Ain Sebaâ" />
+                <div className="mt-5 border-t border-[var(--ice)] pt-5">
+                  <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3">Services inclus</div>
+                  <div className="flex flex-col gap-3">
+                    {currentPkg.features.map((f, i) => (
+                      <div key={i} className="flex items-start gap-3 text-[13px] font-bold text-[var(--text)]">
+                        <CheckCircle2 size={16} className="text-[var(--success)] shrink-0 mt-0.5" />
+                        <span className="leading-tight">{f.t}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 bg-gradient-to-br from-[#F0FDF4] to-[#DCFCE7] border-t border-[#bbf7d0] mt-auto flex items-end justify-between">
+                 <div>
+                   <div className="text-[11px] font-black text-[var(--success)] uppercase tracking-widest mb-1">Prix estimatif</div>
+                   <div className="text-[12px] font-bold text-green-700">TTC</div>
+                 </div>
+                 <div className="text-[28px] font-black text-[var(--text)] leading-none tracking-tight">{estimatedPrice.toLocaleString()}<span className="text-[14px] ml-1">DH</span></div>
+              </div>
+            </PremiumCard>
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 p-6 glass-panel border-t border-[var(--ice)] rounded-t-[40px] z-20">
+            <Button onClick={() => setStep('center')} fullWidth className="!py-4.5 !text-[16px]">Choisir un centre SAV</Button>
+          </div>
+        </>
+      );
+
+      case 'center': return (
+        <>
+          <div className="px-8 pt-4 flex-1 overflow-y-auto hide-scrollbar pb-36 animate-slide-in-right">
+             <p className="text-[16px] font-medium text-[var(--text-muted)] mb-6 px-1 mt-2">Trouvez le centre SAV BYD certifié le plus proche.</p>
+             <div className="relative mb-6 shrink-0">
+               <Search size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+               <input type="text" placeholder="Rechercher une ville..." className="w-full bg-white border border-[var(--ice)] shadow-sm rounded-[24px] pl-14 pr-5 py-4 text-[15px] font-bold focus:outline-none focus:border-[var(--cyan)] focus:ring-4 focus:ring-[var(--cyan)]/10" defaultValue="Casablanca" />
+             </div>
+             
+             <div className="w-full h-44 bg-[var(--ice)] rounded-[32px] mb-6 relative overflow-hidden border-4 border-white shadow-sm shrink-0">
+               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cartographer.png')] opacity-30 mix-blend-multiply"></div>
+               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+                  <div className="w-14 h-14 gradient-blue rounded-full flex items-center justify-center text-white shadow-xl border-4 border-white z-10 animate-bounce"><WrenchIcon size={24} strokeWidth={2.5}/></div>
+                  <div className="bg-white text-[11px] font-black uppercase tracking-widest px-4 py-2 rounded-xl shadow-lg mt-2 border border-[var(--ice)]">BYD Casa Ain Sebaâ</div>
+               </div>
+               <div className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center text-[var(--primary)]"><MapPin size={18}/></div>
+             </div>
+
+             <div className="flex flex-col gap-4 pb-4">
+                {[
+                  { n: "BYD Casa - Ain Sebaâ", d: "2.1 km", r: "4.8", a: "Aujourd'hui" },
+                  { n: "BYD Casa - Sidi Maârouf", d: "6.5 km", r: "4.5", a: "Demain" }
+                ].map((c, i) => (
+                  <PremiumCard key={i} className="flex flex-col gap-4 !p-5 shrink-0">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-[18px] font-black text-[var(--text)] tracking-tight">{c.n}</div>
+                        <div className="text-[13px] font-bold text-[var(--text-muted)] flex items-center gap-2 mt-2">
+                          <span className="flex items-center gap-1"><MapPin size={14}/> {c.d}</span> 
+                          <span className="text-gray-300">•</span> 
+                          <span className="flex items-center gap-1"><Star size={14} className="text-[var(--warning)] fill-[var(--warning)]"/> {c.r}</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black bg-[#F0FDF4] text-[var(--success)] px-3 py-1.5 rounded-lg uppercase tracking-wider border border-green-100 shadow-sm">{c.a}</span>
+                    </div>
+                  </PremiumCard>
+                ))}
+             </div>
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 p-6 glass-panel border-t border-[var(--ice)] rounded-t-[40px] z-20">
+            <Button onClick={() => setStep('slot')} fullWidth className="!py-4.5 !text-[16px]">Confirmer le centre</Button>
+          </div>
+        </>
+      );
+
+      case 'slot': return (
+        <>
+          <div className="px-8 pt-4 flex-1 overflow-y-auto hide-scrollbar pb-36 animate-slide-in-right">
+             <p className="text-[16px] font-medium text-[var(--text-muted)] mb-6 px-1 mt-2 shrink-0">Choisissez la date et l'heure de votre rendez-vous.</p>
+             
+             <div className="bg-white rounded-[32px] border border-[var(--ice)] shadow-sm p-6 mb-8 shrink-0">
+               <div className="flex items-center justify-between mb-6">
+                 <span className="text-[18px] font-black text-[var(--text)] tracking-tight">Mai 2024</span>
+                 <div className="flex gap-2">
+                   <div className="w-8 h-8 rounded-full bg-[var(--bg-color)] flex items-center justify-center text-gray-400 cursor-not-allowed"><ChevronLeft size={18}/></div>
+                   <div className="w-8 h-8 rounded-full bg-[var(--ice)] flex items-center justify-center text-[var(--primary)] cursor-pointer hover:bg-blue-100 transition-colors shadow-sm"><ChevronRight size={18}/></div>
+                 </div>
+               </div>
+
+               <div className="grid grid-cols-7 gap-y-4 gap-x-2">
+                 {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
+                   <div key={i} className="text-center text-[11px] font-black text-[var(--text-muted)] opacity-70">{d}</div>
+                 ))}
+                 
+                 <div className="col-span-2"></div>
+                 
+                 {Array.from({length: 31}).map((_, i) => {
+                   const day = i + 1;
+                   const isPast = day < 12;
+                   const isWeekend = (day + 1) % 7 === 0 || (day + 2) % 7 === 0;
+                   const isSelected = day === 13;
+                   const isDisabled = isPast || isWeekend;
+                   const isLimited = day === 16 || day === 23 || day === 28;
+                   
+                   return (
+                     <div key={day} className="flex justify-center relative group">
+                       <div className={`w-9 h-9 flex items-center justify-center rounded-full text-[14px] font-bold transition-all ${
+                         isSelected ? 'gradient-blue text-white shadow-md scale-110' :
+                         isDisabled ? 'text-gray-300 pointer-events-none' :
+                         'text-[var(--text)] hover:bg-[var(--ice)] cursor-pointer'
+                       }`}>
+                         {day}
+                       </div>
+                       {!isDisabled && !isSelected && (
+                         <div className={`absolute -bottom-1.5 w-1.5 h-1.5 rounded-full ${isLimited ? 'bg-[var(--warning)]' : 'bg-[var(--success)]'} transition-transform group-hover:scale-125`}></div>
+                       )}
+                     </div>
+                   );
+                 })}
+               </div>
+               
+               <div className="flex items-center justify-center gap-5 mt-6 border-t border-[var(--ice)] pt-4">
+                 <div className="flex items-center gap-1.5 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
+                   <div className="w-1.5 h-1.5 rounded-full bg-[var(--success)]"></div> Dispo
+                 </div>
+                 <div className="flex items-center gap-1.5 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
+                   <div className="w-1.5 h-1.5 rounded-full bg-[var(--warning)]"></div> Limité
+                 </div>
+               </div>
+             </div>
+             
+             <h4 className="text-[15px] font-black text-[var(--text)] tracking-tight mb-4 px-1 shrink-0">Créneaux du matin</h4>
+             <div className="grid grid-cols-3 gap-3 mb-6 shrink-0">
+               {['08:30', '09:00', '09:30', '10:00', '10:30', '11:00'].map((t, i) => (
+                 <div key={i} className={`py-4 rounded-[20px] text-center text-[15px] font-black transition-all cursor-pointer shadow-sm ${i===3 ? 'bg-[var(--ice)] text-[var(--primary)] border-2 border-[var(--primary)]' : i===1||i===5 ? 'bg-gray-50 border border-gray-100 text-gray-400 opacity-50 cursor-not-allowed' : 'bg-white border border-[var(--ice)] text-[var(--text-muted)] hover:border-blue-200'}`}>
+                   {t}
+                 </div>
+               ))}
+             </div>
+             <h4 className="text-[15px] font-black text-[var(--text)] tracking-tight mb-4 px-1 shrink-0">Créneaux de l'après-midi</h4>
+             <div className="grid grid-cols-3 gap-3 shrink-0">
+               {['14:00', '14:30', '15:00', '16:00', '16:30'].map((t, i) => (
+                 <div key={`pm-${i}`} className="py-4 rounded-[20px] text-center text-[15px] font-black transition-all cursor-pointer shadow-sm bg-white border border-[var(--ice)] text-[var(--text-muted)] hover:border-blue-200">
+                   {t}
+                 </div>
+               ))}
+             </div>
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 p-6 glass-panel border-t border-[var(--ice)] rounded-t-[40px] z-20">
+            <Button onClick={() => setStep('confirmation')} fullWidth className="!py-4.5 !text-[16px]">Valider le créneau</Button>
+          </div>
+        </>
+      );
+
+      case 'confirmation': return (
+        <div className="px-8 pt-10 flex-1 overflow-y-auto hide-scrollbar pb-36 animate-slide-up flex flex-col items-center text-center">
+           <div className="relative mb-8 mt-10">
+             <div className="absolute inset-0 bg-[var(--success)] rounded-full blur-[40px] opacity-40 animate-pulse"></div>
+             <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#16A34A] to-[#15803d] flex items-center justify-center shadow-[0_20px_40px_-10px_rgba(22,163,74,0.5)] relative z-10 border-4 border-white">
+               <Check size={64} className="text-white" strokeWidth={3} />
+             </div>
+           </div>
+           <h2 className="text-[32px] font-black text-[var(--text)] mb-4 tracking-tight leading-tight">Demande envoyée !</h2>
+           <p className="text-[16px] font-medium text-[var(--text-muted)] mb-10 max-w-[90%] leading-relaxed">
+             Votre demande de planification du forfait <span className="font-bold text-[var(--text)]">{currentPkg.title}</span> a bien été envoyée. Un conseiller BYD SAV confirmera votre rendez-vous.
+           </p>
+           <div className="w-full flex flex-col gap-4 mt-4">
+             <Button onClick={onClose} fullWidth className="!py-4.5 !text-[16px]">Retour à l'accueil</Button>
+           </div>
+        </div>
+      );
+    }
+  };
 
   return (
-    <PremiumScreen className="h-full z-50 fixed inset-0 flex flex-col">
-      <Header title="Simulateur de Forfaits" onBack={onClose} />
-      <div className="px-6 pt-6 flex-1 overflow-y-auto hide-scrollbar pb-36 animate-slide-in-right">
-         
-         {/* Premium Car Context */}
-         <div className="relative h-56 rounded-[36px] overflow-hidden gradient-blue mb-8 shadow-[0_20px_40px_-10px_rgba(0,40,94,0.3)] flex flex-col items-center justify-end p-6 border border-white/20">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,var(--cyan)_0%,transparent_60%)] opacity-30"></div>
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-20 mix-blend-overlay"></div>
-            
-            {/* Chips vehicles */}
-            <div className="absolute top-4 w-full flex justify-center gap-2 px-6 z-20">
-              {['ATTO 3', 'HAN', 'SEAL'].map(car => (
-                <button key={car} onClick={() => setSelectedCar(car)} className={`text-[11px] font-black px-4 py-1.5 rounded-full transition-all ${selectedCar === car ? 'bg-white text-[var(--primary)] shadow-sm scale-105' : 'bg-white/20 backdrop-blur-md text-white border border-white/30 hover:bg-white/30'}`}>
-                  {car}
-                </button>
-              ))}
-            </div>
-
-            <img src={carImages[selectedCar]} className="absolute top-8 w-[140%] max-w-none object-contain drop-shadow-[0_30px_30px_rgba(0,10,30,0.8)] transition-opacity duration-300" alt={selectedCar} />
-         </div>
-
-         {/* Usage Selector */}
-         <div className="flex gap-2 mb-6">
-           {['Ville', 'Mixte', 'Autoroute'].map(u => (
-             <button key={u} onClick={() => setUsage(u.toLowerCase())} className={`flex-1 py-3.5 rounded-[20px] text-[13px] font-black transition-all shadow-sm ${usage === u.toLowerCase() ? 'gradient-blue text-white' : 'bg-white border border-[var(--ice)] text-[var(--text-muted)]'}`}>
-               {u}
-             </button>
-           ))}
-         </div>
-
-         {/* Slider */}
-         <PremiumCard className="mb-10 shadow-md">
-           <div className="flex justify-between items-end mb-8">
-             <span className="text-[16px] font-black text-[var(--text)] tracking-tight">Kilométrage actuel</span>
-             <span className="text-[32px] font-black text-[var(--primary)] leading-none">{km.toLocaleString()} <span className="text-[16px] font-bold">km</span></span>
-           </div>
-           <div className="relative py-2">
-             <input 
-               type="range" min="5000" max="100000" step="5000" value={km} 
-               onChange={(e) => setKm(parseInt(e.target.value))}
-               className="w-full h-4 bg-[var(--ice)] rounded-full appearance-none cursor-pointer accent-[var(--primary)] shadow-inner relative z-10"
-             />
-           </div>
-           <div className="flex justify-between mt-4 text-[12px] font-black text-[var(--text-muted)] px-1">
-             <span>5 000 km</span><span>100 000 km</span>
-           </div>
-         </PremiumCard>
-
-         <div className="flex justify-between items-end mb-4 px-2">
-            <h3 className="text-[20px] font-black text-[var(--text)] tracking-tight">Forfaits applicables</h3>
-         </div>
-
-         {/* Interactive Package Tabs */}
-         <div className="flex gap-2 mb-6 bg-white p-1.5 rounded-[24px] border border-[var(--ice)] shadow-sm">
-           {Object.keys(packages).map((pkgKey) => (
-             <button 
-               key={pkgKey} 
-               onClick={() => setSelectedPackage(pkgKey)}
-               className={`flex-1 py-3 rounded-[18px] text-[13px] font-black capitalize transition-all ${selectedPackage === pkgKey ? 'bg-[var(--primary)] text-white shadow-md' : 'text-[var(--text-muted)] hover:bg-[var(--ice)]'}`}
-             >
-               {pkgKey}
-             </button>
-           ))}
-         </div>
-         
-         <div className="gradient-blue rounded-[36px] p-8 text-white shadow-[0_24px_48px_-12px_rgba(0,40,94,0.4)] relative overflow-hidden border border-white/20 transition-all duration-300">
-            <div className="absolute -right-10 -top-10 w-48 h-48 bg-[var(--cyan)] rounded-full blur-[60px] opacity-40 mix-blend-screen pointer-events-none"></div>
-            
-            {selectedPackage === 'essentiel' && (
-              <div className="absolute top-6 right-6 bg-[var(--warning)] text-white text-[11px] font-black px-3.5 py-1.5 rounded-[12px] uppercase tracking-wider shadow-sm border border-yellow-300/50">
-                Recommandé
-              </div>
-            )}
-            
-            <h4 className="text-[28px] font-black mb-2 tracking-tight">{currentPkg.title}</h4>
-            <p className="text-[14px] font-medium text-white/80 mb-8 leading-relaxed max-w-[85%]">
-              {currentPkg.desc}
-            </p>
-            
-            <div className="flex flex-col gap-4 mb-8">
-              {currentPkg.features.map((f, i) => {
-                const IconComponent = f.i;
-                return (
-                  <div key={i} className="flex items-center gap-4 bg-white/10 backdrop-blur-md p-3.5 rounded-[20px] border border-white/10">
-                    <IconComponent size={20} className="text-[var(--cyan)] shrink-0" strokeWidth={2.5}/> 
-                    <span className="text-[14px] font-bold">{f.t}</span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="glass-panel-dark rounded-[28px] p-6 flex items-end justify-between border-white/20 shadow-inner">
-              <div>
-                <div className="text-[11px] text-white/70 font-black uppercase tracking-widest mb-1">Estimation TTC</div>
-                <div className="text-[36px] font-black leading-none tracking-tight">{(currentPkg.price + (km > 50000 ? 400 : 0)).toLocaleString()}<span className="text-[16px] font-bold text-white/80 ml-1">DH</span></div>
-              </div>
-              <div className="text-right">
-                <div className="text-[11px] text-white/70 font-black uppercase tracking-widest mb-2">Durée</div>
-                <div className="text-[16px] font-black bg-white/20 px-3 py-1.5 rounded-lg border border-white/30">{currentPkg.duration}</div>
-              </div>
-            </div>
-         </div>
-      </div>
-
-      {/* Sticky Bottom CTA */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 glass-panel border-t border-[var(--ice)] rounded-t-[40px] z-20">
-         <Button onClick={onBook} fullWidth className="!py-4.5 !text-[16px]">Planifier {packages[selectedPackage].title.toLowerCase()}</Button>
+    <PremiumScreen className="bg-[var(--bg-color)] h-full z-50 fixed inset-0 flex flex-col">
+      <Header 
+        title={headerTitle} 
+        onBack={handleBack} 
+        rightAction={step !== 'simulator' && step !== 'confirmation' ? <button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm border border-[var(--ice)] active:scale-95 text-[var(--text)]"><X size={24} strokeWidth={2.5}/></button> : null}
+        transparent={step === 'confirmation'}
+      />
+      {stepNumber > 0 && stepNumber < 4 && (
+        <div className="px-8 pt-2 pb-4 shrink-0">
+          <div className="flex gap-2 h-1.5">
+            {Array.from({length: 3}).map((_, i) => (
+              <div key={i} className={`flex-1 rounded-full transition-colors ${i < stepNumber ? 'gradient-blue shadow-[0_0_8px_rgba(0,40,94,0.4)]' : 'bg-gray-200'}`}></div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="flex-1 flex flex-col relative overflow-hidden">
+        {renderStep()}
       </div>
     </PremiumScreen>
   );
 };
 
-const EmergencyScreen = ({ onClose }) => (
+const EmergencyScreen = ({ onClose, onOpen }) => (
   <PremiumScreen className="h-full z-50 fixed inset-0">
     <Header title="" onBack={onClose} transparent rightAction={<button onClick={onClose} className="w-12 h-12 flex items-center justify-center bg-white/20 backdrop-blur-md rounded-full text-white border border-white/30 active:scale-95"><X size={28} strokeWidth={2.5}/></button>}/>
     <div className="flex-1 overflow-y-auto hide-scrollbar absolute inset-0 z-0">
@@ -2315,47 +2544,52 @@ const EmergencyScreen = ({ onClose }) => (
             <Phone size={48} className="text-white relative z-10" strokeWidth={2.5} />
           </div>
           <h2 className="text-[40px] font-black mb-3 tracking-tight leading-none">Assistance BYD</h2>
-          <p className="text-white/90 text-[18px] font-medium max-w-[85%] leading-relaxed">Nous sommes là pour vous, <span className="font-black text-white">24h/24 et 7j/7</span>, où que vous soyez.</p>
+          <p className="text-white/90 text-[18px] font-medium max-w-[85%] leading-relaxed">Nous sommes là pour vous, <span className="font-black text-white">24h/24 et 7j/7</span>, en cas de besoin.</p>
         </div>
       </div>
 
       <div className="px-6 -mt-10 relative z-20 animate-slide-up pb-12">
-        <PremiumCard className="text-center !p-8 mb-6 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.15)] border-t border-white">
+        <PremiumCard className="text-center !p-8 mb-4 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.15)] border-t border-white">
           <p className="text-[36px] font-black text-[var(--text)] tracking-tight mb-1">05 22 10 64 56</p>
-          <p className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-8">Appel gratuit depuis le Maroc</p>
+          <p className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-6">Appel gratuit depuis le Maroc</p>
           <Button variant="danger" fullWidth icon={Phone} className="!py-5 !text-[18px] shadow-[0_12px_24px_rgba(220,38,38,0.4)]">Appeler l'assistance</Button>
         </PremiumCard>
 
-        <div className="bg-gradient-to-r from-[#F0FDF4] to-white rounded-[32px] p-6 border-l-4 border-l-[var(--success)] shadow-sm mb-6 flex flex-col gap-4">
+        <div className="grid grid-cols-2 gap-3 mb-8">
+          <button className="bg-white border border-[var(--ice)] rounded-[20px] p-4 flex flex-col items-center justify-center gap-2.5 shadow-sm active:scale-95 transition-all group hover:border-green-200">
+             <div className="w-12 h-12 bg-[#F0FDF4] rounded-full flex items-center justify-center text-[var(--success)] group-hover:scale-110 transition-transform"><MessageSquare size={22} strokeWidth={2.5}/></div>
+             <span className="text-[13px] font-black text-[var(--text)]">WhatsApp</span>
+          </button>
+          <button className="bg-white border border-[var(--ice)] rounded-[20px] p-4 flex flex-col items-center justify-center gap-2.5 shadow-sm active:scale-95 transition-all group hover:border-blue-200" onClick={() => { if(onOpen) { onClose(); onOpen('contact'); } }}>
+             <div className="w-12 h-12 bg-[var(--ice)] rounded-full flex items-center justify-center text-[var(--primary)] group-hover:scale-110 transition-transform"><WrenchIcon size={22} strokeWidth={2.5}/></div>
+             <span className="text-[13px] font-black text-[var(--text)]">Centre SAV</span>
+          </button>
+        </div>
+
+        <h3 className="text-[18px] font-black text-[var(--text)] mb-4 px-2 tracking-tight">Consignes de sécurité</h3>
+        <div className="flex flex-col gap-3 mb-8">
+           <div className="bg-white rounded-[20px] p-4 border border-[var(--ice)] shadow-sm flex items-center gap-4">
+              <div className="w-8 h-8 rounded-full bg-red-50 text-[var(--danger)] flex items-center justify-center font-black text-[14px] shrink-0">1</div>
+              <p className="text-[14px] font-bold text-[var(--text)] leading-tight">Allumez vos feux de détresse pour signaler votre présence.</p>
+           </div>
+           <div className="bg-white rounded-[20px] p-4 border border-[var(--ice)] shadow-sm flex items-center gap-4">
+              <div className="w-8 h-8 rounded-full bg-orange-50 text-[var(--warning)] flex items-center justify-center font-black text-[14px] shrink-0">2</div>
+              <p className="text-[14px] font-bold text-[var(--text)] leading-tight">Enfilez votre gilet de sécurité avant de quitter le véhicule.</p>
+           </div>
+           <div className="bg-white rounded-[20px] p-4 border border-[var(--ice)] shadow-sm flex items-center gap-4">
+              <div className="w-8 h-8 rounded-full bg-blue-50 text-[var(--primary)] flex items-center justify-center font-black text-[14px] shrink-0">3</div>
+              <p className="text-[14px] font-bold text-[var(--text)] leading-tight">Mettez-vous à l'abri, idéalement derrière la glissière.</p>
+           </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-[#F0FDF4] to-white rounded-[32px] p-6 border-l-4 border-l-[var(--success)] shadow-sm flex flex-col gap-4">
           <div className="flex items-center gap-4">
              <div className="w-12 h-12 bg-white rounded-[20px] flex items-center justify-center text-[var(--success)] shadow-sm border border-[var(--ice)]"><Shield size={24} strokeWidth={2.5}/></div>
-             <span className="text-[18px] font-black text-[var(--text)] tracking-tight">Service offert BYD</span>
+             <span className="text-[18px] font-black text-[var(--text)] tracking-tight">Assistance garantie</span>
           </div>
           <p className="text-[14px] text-[var(--text-muted)] font-medium leading-relaxed px-1">
-            Une panne ou un imprévu ne devrait jamais interrompre votre trajet. Profitez d'un accompagnement rapide au Maroc et à l'international, 100% pris en charge.
+            En cas de panne immobilisante, BYD prend en charge le remorquage vers le centre agréé le plus proche selon vos conditions de garantie.
           </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-10">
-          <Button variant="secondary" icon={MapPin} className="!text-[14px] !py-5 shadow-sm border-[var(--ice)]">Partager ma position</Button>
-          <Button variant="secondary" icon={AlertTriangle} className="!text-[14px] !py-5 shadow-sm border-[var(--ice)] text-[var(--danger)]">Déclarer une panne</Button>
-        </div>
-
-        <h3 className="text-[18px] font-black text-[var(--text)] mb-6 px-2 tracking-tight">Nos engagements qualité</h3>
-        <div className="flex flex-col gap-4">
-          {[
-            { t: "Intervention sur place", d: "En moins de 45 minutes en zone urbaine" },
-            { t: "Techniciens experts BYD", d: "Formés spécifiquement sur nos technologies" },
-            { t: "Mobilité garantie", d: "Véhicule de remplacement selon conditions" }
-          ].map((e, i) => (
-            <PremiumCard key={i} className="flex items-center gap-5 !p-5 shadow-sm">
-              <div className="w-14 h-14 rounded-[20px] bg-[var(--ice)] flex items-center justify-center text-[var(--primary)] border border-white shadow-inner shrink-0"><CheckCircle2 size={28} strokeWidth={2.5}/></div>
-              <div>
-                <div className="text-[16px] font-black text-[var(--text)] tracking-tight mb-1">{e.t}</div>
-                <div className="text-[13px] font-medium text-[var(--text-muted)] leading-tight">{e.d}</div>
-              </div>
-            </PremiumCard>
-          ))}
         </div>
       </div>
     </div>
@@ -2837,6 +3071,229 @@ const ContactScreen = ({ onClose, onOpen }) => (
   </PremiumScreen>
 );
 
+const RepairQuoteModal = ({ onClose, onAccept }) => {
+  const [isAccepted, setIsAccepted] = useState(false);
+
+  const handleAccept = () => {
+    setIsAccepted(true);
+    setTimeout(() => {
+      onAccept();
+      onClose();
+    }, 1500);
+  };
+
+  if (isAccepted) {
+    return (
+      <PremiumScreen className="h-full z-[100] fixed inset-0 bg-transparent">
+        <div className="absolute inset-0 bg-[var(--primary-deep)]/70 backdrop-blur-md"></div>
+        <div className="absolute bottom-0 left-0 right-0 bg-[var(--bg-color)] rounded-t-[48px] p-8 shadow-2xl flex flex-col items-center justify-center min-h-[50vh] animate-slide-up">
+          <div className="w-24 h-24 rounded-full bg-[var(--success)] flex items-center justify-center text-white mb-6 animate-pulse ring-8 ring-green-100">
+            <CheckCircle2 size={48} strokeWidth={2.5} />
+          </div>
+          <h3 className="text-[24px] font-black text-[var(--text)] mb-2 tracking-tight">Devis validé !</h3>
+          <p className="text-[15px] font-medium text-[var(--text-muted)] text-center max-w-[85%]">Merci pour votre confirmation. Les travaux reprennent immédiatement.</p>
+        </div>
+      </PremiumScreen>
+    );
+  }
+
+  return (
+    <PremiumScreen className="h-full z-[100] fixed inset-0 bg-transparent">
+      <div className="absolute inset-0 bg-[var(--primary-deep)]/70 backdrop-blur-md transition-opacity" onClick={onClose}></div>
+      <div className="absolute bottom-0 left-0 right-0 bg-[var(--bg-color)] rounded-t-[48px] p-8 shadow-[0_-20px_40px_rgba(0,0,0,0.3)] border-t border-white/50 animate-slide-up flex flex-col max-h-[90vh]">
+        <div className="w-16 h-1.5 bg-gray-300 rounded-full mx-auto mb-6 shrink-0"></div>
+        
+        <div className="overflow-y-auto hide-scrollbar pb-8 flex flex-col">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="bg-yellow-100 text-[var(--warning)] px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5"><AlertTriangle size={12} strokeWidth={3}/> Action requise</span>
+              </div>
+              <h3 className="text-[24px] font-black text-[var(--text)] tracking-tight leading-tight mb-1">Devis complémentaire</h3>
+              <p className="text-[13px] font-medium text-[var(--text-muted)] leading-relaxed max-w-[90%]">Validation requise pour poursuivre l’intervention</p>
+            </div>
+            <div className="bg-[var(--ice)] px-4 py-2 rounded-[16px] shadow-inner border border-white shrink-0">
+              <span className="text-[16px] font-black text-[var(--primary)]">1 450 DH</span>
+            </div>
+          </div>
+
+          <PremiumCard className="!p-5 my-6 flex flex-col gap-4 border-l-4 !border-l-[var(--warning)] shadow-sm">
+             <div>
+               <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1.5">Description de l'intervention</div>
+               <div className="text-[14px] font-bold text-[var(--text)] leading-snug">Remplacement des plaquettes de frein avant suite à une usure prononcée détectée lors du diagnostic.</div>
+             </div>
+             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[var(--ice)]">
+                <div>
+                   <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><Package size={14} className="text-[var(--primary)]"/> Pièces</div>
+                   <div className="text-[14px] font-black text-[var(--text)]">850 DH</div>
+                   <div className="text-[11px] font-medium text-[var(--text-muted)] mt-0.5">Jeu de plaquettes AV</div>
+                </div>
+                <div>
+                   <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><WrenchIcon size={14} className="text-[var(--primary)]"/> Main-d'œuvre</div>
+                   <div className="text-[14px] font-black text-[var(--text)]">600 DH</div>
+                   <div className="text-[11px] font-medium text-[var(--text-muted)] mt-0.5">1h30 estimée</div>
+                </div>
+             </div>
+          </PremiumCard>
+
+          <div className="flex items-center justify-between bg-white rounded-[20px] p-4 shadow-sm border border-[var(--ice)] mb-4 cursor-pointer hover:bg-gray-50 transition-colors">
+             <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-[16px] bg-[var(--bg-color)] flex items-center justify-center text-[var(--primary)] border border-[var(--ice)] shadow-inner"><FileText size={20} strokeWidth={2.5}/></div>
+                <div>
+                   <div className="text-[14px] font-black text-[var(--text)] tracking-tight">Devis_OR-2026-00482.pdf</div>
+                   <div className="text-[12px] font-medium text-[var(--text-muted)]">Document officiel (1.2 Mo)</div>
+                </div>
+             </div>
+             <button className="text-[var(--primary)] w-10 h-10 flex items-center justify-center bg-[var(--ice)] rounded-full transition-transform active:scale-95 shadow-sm"><Download size={18} strokeWidth={2.5}/></button>
+          </div>
+
+          <div className="flex items-center justify-between bg-[#F0FDF4] rounded-[20px] p-5 border border-[#bbf7d0] mb-8 shadow-sm">
+            <span className="text-[14px] font-black text-[var(--text)] tracking-tight">Délai estimé supplémentaire</span>
+            <span className="text-[14px] font-black text-[var(--success)]">+ 45 minutes</span>
+          </div>
+
+          <div className="flex flex-col gap-3 mt-auto">
+            <Button variant="primary" onClick={handleAccept} fullWidth className="!py-4.5 !text-[16px] shadow-[0_8px_24px_rgba(22,163,74,0.4)] !bg-gradient-to-r !from-[#16A34A] !to-[#15803d] border-t border-white/20">
+              <CheckCircle2 size={22}/> Accepter le devis
+            </Button>
+            <div className="flex gap-3">
+               <Button variant="secondary" onClick={onClose} className="flex-1 !py-4 !text-[14px] border-[var(--ice)] !text-[var(--danger)] bg-red-50/50 hover:bg-red-50"><X size={18}/> Refuser</Button>
+               <Button variant="secondary" className="flex-1 !py-4 !text-[14px] border-[var(--ice)] text-[var(--primary)]"><Phone size={18}/> Être rappelé</Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </PremiumScreen>
+  );
+};
+
+const ReportPreviewModal = ({ report, onClose }) => {
+  if (!report) return null;
+  return (
+    <PremiumScreen className="h-full z-[100] fixed inset-0 bg-transparent">
+      <div className="absolute inset-0 bg-[var(--primary-deep)]/70 backdrop-blur-md transition-opacity" onClick={onClose}></div>
+      <div className="absolute bottom-0 left-0 right-0 bg-[var(--bg-color)] rounded-t-[48px] p-8 shadow-[0_-20px_40px_rgba(0,0,0,0.3)] border-t border-white/50 animate-slide-up flex flex-col max-h-[85vh]">
+        <div className="w-16 h-1.5 bg-gray-300 rounded-full mx-auto mb-8 shrink-0"></div>
+        
+        <div className="overflow-y-auto hide-scrollbar pb-8 flex flex-col">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-[24px] font-black text-[var(--text)] tracking-tight leading-tight mb-2">{report.title}</h3>
+                <p className="text-[13px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{report.date}</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mb-8">
+              <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-[14px] shadow-sm border border-[var(--ice)] text-[13px] font-bold text-[var(--text-muted)]">
+                <MapPin size={16} className="text-[var(--primary)]" /> {report.km}
+              </div>
+              <div className="flex items-center gap-2 bg-[#F0FDF4] px-4 py-2.5 rounded-[14px] shadow-sm border border-[#bbf7d0] text-[13px] font-bold text-[var(--success)]">
+                <CheckCircle2 size={16} /> Terminé
+              </div>
+            </div>
+
+            <h4 className="text-[15px] font-black text-[var(--text)] tracking-tight mb-4 px-1">Détails des opérations</h4>
+            <div className="bg-white rounded-[28px] p-6 shadow-sm border border-[var(--ice)] mb-8 flex flex-col gap-4">
+              {report.details.map((d, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-full bg-[var(--ice)] flex items-center justify-center text-[var(--primary)] shrink-0 border border-white shadow-inner"><Check size={14} strokeWidth={3}/></div>
+                  <span className="text-[15px] font-bold text-[var(--text)]">{d}</span>
+                </div>
+              ))}
+            </div>
+
+            <h4 className="text-[15px] font-black text-[var(--text)] tracking-tight mb-4 px-1">Note de l'expert BYD</h4>
+            <div className="bg-white rounded-[28px] p-6 shadow-sm border border-[var(--ice)] mb-8 flex items-start gap-4">
+              <div className="w-12 h-12 rounded-[20px] bg-[var(--bg-color)] flex items-center justify-center text-[var(--primary)] shrink-0 border border-[var(--ice)]"><User size={20} strokeWidth={2.5} /></div>
+              <p className="text-[14px] font-medium text-[var(--text-muted)] leading-relaxed italic pt-1">"{report.techNote}"</p>
+            </div>
+            
+            <Button variant="primary" fullWidth icon={Download} className="!py-4.5 !text-[16px] shrink-0" onClick={onClose}>Télécharger le rapport PDF</Button>
+        </div>
+      </div>
+    </PremiumScreen>
+  );
+};
+
+const NotificationsOverlay = ({ onClose, onAction }) => {
+  const [notifications, setNotifications] = useState([
+    { id: 1, title: "Rapport disponible", desc: "Votre dernier rapport SAV est disponible.", time: "Il y a 10 min", isUnread: true, icon: FileText, cat: 'document', tab: 'suivi', overlay: 'report-preview' },
+    { id: 2, title: "Devis complémentaire", desc: "Une validation est requise pour continuer.", time: "Il y a 2h", isUnread: true, icon: AlertTriangle, cat: 'suivi', tab: 'suivi', overlay: 'repair-quote' },
+    { id: 3, title: "Entretien recommandé", desc: "Votre prochain entretien approche à 30 000 km.", time: "Hier", isUnread: false, icon: WrenchIcon, cat: 'entretien', tab: 'services', overlay: 'simulator' },
+    { id: 4, title: "Offre SAV", desc: "-20% sur le contrôle de printemps.", time: "Hier", isUnread: false, icon: Gift, cat: 'offre', tab: 'explorer', overlay: 'offers' },
+    { id: 5, title: "Rendez-vous confirmé", desc: "Votre rendez-vous SAV est confirmé pour mardi.", time: "Lun", isUnread: false, icon: Calendar, cat: 'rdv', tab: 'accueil', overlay: null },
+    { id: 6, title: "Programme fidélité", desc: "Vous avez gagné 120 points fidélité.", time: "Lun", isUnread: false, icon: Star, cat: 'fidelite', tab: 'profil', overlay: 'loyalty' },
+    { id: 7, title: "Véhicule ajouté", desc: "Votre véhicule a bien été ajouté à votre garage.", time: "12 janv", isUnread: false, icon: Car, cat: 'compte', tab: 'profil', overlay: null }
+  ]);
+
+  const unreadCount = notifications.filter(n => n.isUnread).length;
+
+  const handleNotificationClick = (n) => {
+    setNotifications(notifications.map(notif => notif.id === n.id ? { ...notif, isUnread: false } : notif));
+    onAction('navigate', n.overlay, n.tab);
+  };
+
+  const getBadgeStyle = (cat) => {
+    switch(cat) {
+      case 'suivi': return 'bg-yellow-50 text-[var(--warning)]';
+      case 'entretien': return 'bg-blue-50 text-[var(--primary)]';
+      case 'offre': return 'bg-purple-50 text-purple-600';
+      case 'rdv': return 'bg-[#F0FDF4] text-[var(--success)]';
+      case 'document': return 'bg-gray-100 text-[var(--text-muted)]';
+      case 'fidelite': return 'bg-yellow-50 text-[var(--warning)]';
+      default: return 'bg-[var(--ice)] text-[var(--primary)]';
+    }
+  };
+
+  return (
+    <div className="absolute inset-0 z-[60] flex flex-col animate-fade-in">
+      <div className="absolute inset-0 bg-[var(--primary-deep)]/70 backdrop-blur-md" onClick={onClose}></div>
+      <div className="relative mt-24 bg-[var(--bg-color)] flex-1 rounded-t-[48px] flex flex-col shadow-[0_-20px_40px_rgba(0,0,0,0.3)] border-t border-white/50">
+         <div className="w-16 h-1.5 bg-gray-300 rounded-full mx-auto mt-4 mb-4 shrink-0"></div>
+         
+         <div className="px-8 flex justify-between items-center mb-6 shrink-0">
+           <div>
+             <h2 className="text-[28px] font-black text-[var(--text)] tracking-tight leading-none mb-1.5">Notifications</h2>
+             <p className="text-[13px] font-bold text-[var(--text-muted)]">
+               {unreadCount > 0 ? <span className="text-[var(--primary)]">{unreadCount} nouvelle{unreadCount > 1 ? 's' : ''} alerte{unreadCount > 1 ? 's' : ''}</span> : 'Tout est à jour'}
+             </p>
+           </div>
+           <button onClick={onClose} className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-[var(--ice)] text-[var(--text)] active:scale-95"><X size={24} strokeWidth={2.5}/></button>
+         </div>
+
+         <div className="flex-1 overflow-y-auto px-6 pb-12 flex flex-col gap-3 hide-scrollbar">
+           {notifications.map((n) => {
+             const IconComponent = n.icon;
+             return (
+               <PremiumCard 
+                 key={n.id} 
+                 onClick={() => handleNotificationClick(n)}
+                 className={`!p-5 cursor-pointer hover:shadow-md transition-shadow ${n.isUnread ? 'border-l-4 !border-l-[var(--primary)] bg-gradient-to-r from-white to-[var(--ice)]/40 shadow-sm' : 'opacity-80 shadow-none'}`}
+               >
+                 <div className="flex justify-between items-start mb-3">
+                   <div className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${getBadgeStyle(n.cat)}`}>
+                     <IconComponent size={12} strokeWidth={3}/> {n.cat}
+                   </div>
+                   <span className={`text-[11px] ${n.isUnread ? 'font-black text-[var(--primary)]' : 'font-bold text-[var(--text-muted)]'}`}>
+                     {n.time}
+                   </span>
+                 </div>
+                 <div className="flex items-start gap-4">
+                   <div className="flex-1">
+                     <h4 className={`text-[15px] tracking-tight mb-1 ${n.isUnread ? 'font-black text-[var(--text)]' : 'font-bold text-[var(--text)]'}`}>{n.title}</h4>
+                     <p className={`text-[13px] leading-snug ${n.isUnread ? 'font-medium text-[var(--text-muted)]' : 'font-medium text-gray-400'}`}>{n.desc}</p>
+                   </div>
+                   {n.isUnread && <div className="w-2.5 h-2.5 bg-[var(--primary)] rounded-full shrink-0 mt-2 shadow-[0_0_8px_rgba(0,40,94,0.4)] animate-pulse"></div>}
+                 </div>
+               </PremiumCard>
+             );
+           })}
+         </div>
+      </div>
+    </div>
+  );
+};
+
 const ManualsScreen = ({ onClose, activeVehicle }) => {
   const [activeTab, setActiveTab] = useState('Tous');
 
@@ -2920,96 +3377,4 @@ const ManualsScreen = ({ onClose, activeVehicle }) => {
     </PremiumScreen>
   );
 };
-
-const NotificationsOverlay = ({ onClose, onOpen, onNavigateTab }) => {
-  const [notifications, setNotifications] = useState([
-    { id: 0, badge: "Suivi SAV", title: "Devis complémentaire", desc: "Une validation est requise pour poursuivre les réparations.", time: "À l'instant", icon: AlertTriangle, unread: true },
-    { id: 1, badge: "Suivi SAV", title: "Rapport SAV disponible", desc: "Le rapport d'intervention de votre BYD est prêt à être téléchargé.", time: "Il y a 5 min", icon: FileText, unread: true },
-    { id: 2, badge: "Entretien", title: "Entretien recommandé", desc: "Votre cap des 30 000 km approche. Pensez à planifier votre visite.", time: "Il y a 10 min", icon: WrenchIcon, unread: true },
-    { id: 3, badge: "Suivi SAV", title: "Véhicule prêt", desc: "Votre BYD ATTO 3 est prête. Vous pouvez passer la récupérer en centre.", time: "Il y a 45 min", icon: CheckCircle2, unread: true },
-    { id: 4, badge: "Rendez-vous", title: "Rendez-vous confirmé", desc: "Votre rendez-vous SAV est confirmé pour mardi prochain à 10h30.", time: "Aujourd'hui, 09:15", icon: Calendar, unread: false },
-    { id: 5, badge: "Offre SAV", title: "Contrôle de printemps", desc: "Profitez de -20% sur le forfait entretien exclusif BYD.", time: "Hier, 16:45", icon: Gift, unread: false },
-    { id: 6, badge: "Document", title: "Facture disponible", desc: "Votre facture d'intervention est prête et disponible au téléchargement.", time: "Hier, 14:00", icon: Download, unread: false },
-    { id: 7, badge: "Véhicule", title: "Véhicule ajouté", desc: "Votre véhicule BYD HAN a bien été ajouté à votre garage virtuel.", time: "Hier, 11:20", icon: Car, unread: false },
-    { id: 8, badge: "Système", title: "Synchronisation Autoline", desc: "Vos données SAV ont été mises à jour avec succès.", time: "Hier, 10:05", icon: Database, unread: false },
-    { id: 9, badge: "Document", title: "Manuel disponible", desc: "Le manuel d'utilisation de votre système DiLink est disponible.", time: "Hier, 09:30", icon: BookOpen, unread: false },
-    { id: 10, badge: "Fidélité", title: "Points crédités", desc: "Félicitations, vous avez gagné 120 points fidélité suite à votre visite.", time: "Hier, 08:45", icon: Star, unread: false },
-  ]);
-
-  const handleNotifClick = (n) => {
-     setNotifications(prev => prev.map(notif => notif.id === n.id ? { ...notif, unread: false } : notif));
-     onClose();
-     
-     switch(n.badge) {
-       case "Suivi SAV":
-       case "Entretien":
-         if (onNavigateTab) onNavigateTab('suivi');
-         break;
-       case "Rendez-vous":
-         onOpen('booking');
-         break;
-       case "Offre SAV":
-         onOpen('offers');
-         break;
-       case "Véhicule":
-         if (onNavigateTab) onNavigateTab('profil');
-         break;
-       case "Système":
-         onOpen('autoline-sync');
-         break;
-       case "Document":
-         if (n.title.toLowerCase().includes("manuel")) {
-           onOpen('manuals');
-         } else {
-           if (onNavigateTab) onNavigateTab('suivi');
-         }
-         break;
-       case "Fidélité":
-         onOpen('loyalty');
-         break;
-       default:
-         if (onNavigateTab) onNavigateTab('suivi');
-     }
-  };
-
-  return (
-    <div className="absolute inset-0 z-[60] flex flex-col animate-fade-in">
-      <div className="absolute inset-0 bg-[var(--primary-deep)]/70 backdrop-blur-md" onClick={onClose}></div>
-      <div className="relative mt-32 bg-[var(--bg-color)] flex-1 rounded-t-[48px] flex flex-col shadow-[0_-20px_40px_rgba(0,0,0,0.3)] border-t border-white/50">
-         <div className="w-16 h-1.5 bg-gray-300 rounded-full mx-auto mt-4 mb-6 shrink-0"></div>
-         <div className="px-8 flex justify-between items-center mb-8 shrink-0">
-           <div className="flex items-center gap-3">
-             <h2 className="text-[28px] font-black text-[var(--text)] tracking-tight">Notifications</h2>
-             {notifications.filter(n => n.unread).length > 0 && (
-               <div className="bg-[var(--danger)] text-white text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-sm">
-                 {notifications.filter(n => n.unread).length}
-               </div>
-             )}
-           </div>
-           <button onClick={onClose} className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-[var(--ice)] text-[var(--text)] active:scale-95"><X size={24} strokeWidth={2.5}/></button>
-         </div>
-         <div className="flex-1 overflow-y-auto px-6 pb-12 flex flex-col gap-4 hide-scrollbar">
-           {notifications.map((n) => {
-             const Icon = n.icon;
-             return (
-               <PremiumCard key={n.id} onClick={() => handleNotifClick(n)} className={`!p-5 cursor-pointer hover:shadow-md transition-all relative overflow-hidden ${n.unread ? 'bg-gradient-to-r from-blue-50/50 to-white border-l-4 !border-l-[var(--primary)] shadow-sm' : 'opacity-80 shadow-none'}`}>
-                  {n.unread && <div className="absolute top-5 right-5 w-2 h-2 bg-[var(--primary)] rounded-full animate-pulse shadow-[0_0_8px_rgba(0,40,94,0.4)]"></div>}
-                  <div className="flex justify-between items-start mb-3">
-                    <div className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${n.unread ? 'bg-[var(--ice)] text-[var(--primary)]' : 'bg-gray-100 text-[var(--text-muted)]'}`}>
-                      <Icon size={12} strokeWidth={2.5}/> {n.badge}
-                    </div>
-                    <span className={`text-[11px] font-bold mt-1 ${n.unread ? 'text-[var(--primary)] pr-4' : 'text-[var(--text-muted)]'}`}>{n.time}</span>
-                  </div>
-                  <p className={`text-[16px] tracking-tight mb-1.5 ${n.unread ? 'font-black text-[var(--text)]' : 'font-bold text-[var(--text)]'}`}>{n.title}</p>
-                  <p className="text-[13px] font-medium text-[var(--text-muted)] leading-relaxed">{n.desc}</p>
-               </PremiumCard>
-             );
-           })}
-         </div>
-      </div>
-    </div>
-  );
-};
-
-
 
